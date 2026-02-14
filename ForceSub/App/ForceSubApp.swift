@@ -6,7 +6,6 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        FirebaseApp.configure()
         return true
     }
 }
@@ -14,7 +13,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct ForceSubApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
-    @State private var authViewModel = AuthViewModel()
+    @State private var authViewModel: AuthViewModel
+
+    init() {
+        FirebaseApp.configure()
+        _authViewModel = State(initialValue: AuthViewModel())
+    }
 
     var body: some Scene {
         WindowGroup {
