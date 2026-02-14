@@ -53,10 +53,11 @@ final class AuthViewModel {
 
     private static func friendlyMessage(for error: Error) -> String {
         let nsError = error as NSError
-        print("[Auth Error] code: \(nsError.code), domain: \(nsError.domain), description: \(nsError.localizedDescription), userInfo: \(nsError.userInfo)")
+        let debugInfo = "[Auth Error] code: \(nsError.code), domain: \(nsError.domain), description: \(nsError.localizedDescription), userInfo: \(nsError.userInfo)"
+        print(debugInfo)
 
         guard let code = AuthErrorCode.Code(rawValue: nsError.code) else {
-            return error.localizedDescription
+            return "\(error.localizedDescription)\n\nDebug: code=\(nsError.code) domain=\(nsError.domain)"
         }
         switch code {
         case .invalidEmail:
@@ -71,8 +72,10 @@ final class AuthViewModel {
             return "No account found with this email."
         case .networkError:
             return "Network error. Please check your connection."
+        case .internalError:
+            return "Firebase internal error. Check that Email/Password sign-in is enabled in Firebase Console → Authentication → Sign-in method.\n\nDebug: \(nsError.userInfo)"
         default:
-            return error.localizedDescription
+            return "\(error.localizedDescription)\n\nDebug: code=\(nsError.code)"
         }
     }
 
