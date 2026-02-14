@@ -56,7 +56,7 @@ final class AuthViewModel {
         let debugInfo = "[Auth Error] code: \(nsError.code), domain: \(nsError.domain), description: \(nsError.localizedDescription), userInfo: \(nsError.userInfo)"
         print(debugInfo)
 
-        guard let code = AuthErrorCode.Code(rawValue: nsError.code) else {
+        guard let code = AuthErrorCode(rawValue: nsError.code) else {
             return "\(error.localizedDescription)\n\nDebug: code=\(nsError.code) domain=\(nsError.domain)"
         }
         switch code {
