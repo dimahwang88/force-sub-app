@@ -54,6 +54,17 @@ final class ClassDetailViewModel {
         isLoading = false
     }
 
+    func refreshClass() async {
+        guard let classId = gymClass.id else { return }
+        do {
+            if let updated = try await classService.fetchClass(id: classId) {
+                gymClass = updated
+            }
+        } catch {
+            // Non-critical: keep showing existing data
+        }
+    }
+
     func cancelBooking() async {
         guard let booking = existingBooking else { return }
         isLoading = true

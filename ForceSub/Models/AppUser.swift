@@ -8,4 +8,9 @@ struct AppUser: Codable, Identifiable {
     let createdAt: Date
     var beltRank: String?
     var phone: String?
+    var isAdmin: Bool?
+
+    var admin: Bool {
+        isAdmin ?? false
+    }
 }
