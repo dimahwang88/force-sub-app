@@ -36,44 +36,33 @@ const db = getFirestore();
 // ============================================================
 const weeklyTemplate = [
   // Monday
-  { day: 1, hour: 6,  minute: 0,  name: "Morning HIIT",        instructor: "Coach Mike",    durationMinutes: 45, level: "intermediate", location: "Studio A", totalSpots: 20, description: "High intensity interval training to start your day" },
-  { day: 1, hour: 9,  minute: 0,  name: "Yoga Flow",           instructor: "Sarah Chen",    durationMinutes: 60, level: "beginner",     location: "Studio B", totalSpots: 15, description: "Gentle yoga flow for all levels" },
-  { day: 1, hour: 12, minute: 0,  name: "Lunch Burn",          instructor: "Coach Mike",    durationMinutes: 30, level: "intermediate", location: "Studio A", totalSpots: 25, description: "Quick midday cardio blast" },
-  { day: 1, hour: 17, minute: 30, name: "Strength Training",   instructor: "Jake Torres",   durationMinutes: 60, level: "advanced",     location: "Weight Room", totalSpots: 12, description: "Barbell and dumbbell compound lifts" },
-  { day: 1, hour: 19, minute: 0,  name: "Boxing Fundamentals", instructor: "Coach Mike",    durationMinutes: 45, level: "beginner",     location: "Studio A", totalSpots: 16, description: "Learn boxing basics and get a great workout" },
+  { day: 1, hour: 6,  minute: 0,  name: "Open Mat",            instructor: "Simon",           durationMinutes: 60,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
+  { day: 1, hour: 16, minute: 30, name: "Baby Jitsu",          instructor: "Caz",           durationMinutes: 30,  level: "4-8 yrs old",     location: "Main mat", totalSpots: 15, description: "" },
+  { day: 1, hour: 17, minute: 0,  name: "Teens BJJ",           instructor: "Caz",           durationMinutes: 60,  level: "9-15 yrs old",    location: "Main mat", totalSpots: 20, description: "" },
+  { day: 1, hour: 18, minute: 0,  name: "MMA",                 instructor: "Jamie",           durationMinutes: 60,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
+  { day: 1, hour: 19, minute: 0,  name: "Nogi",                instructor: "Daz",           durationMinutes: 90,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
 
   // Tuesday
-  { day: 2, hour: 6,  minute: 0,  name: "Spin Class",          instructor: "Lisa Park",     durationMinutes: 45, level: "intermediate", location: "Spin Room", totalSpots: 20, description: "Indoor cycling with intervals" },
-  { day: 2, hour: 9,  minute: 30, name: "Pilates Core",        instructor: "Sarah Chen",    durationMinutes: 50, level: "beginner",     location: "Studio B", totalSpots: 15, description: "Core-focused pilates session" },
-  { day: 2, hour: 17, minute: 0,  name: "CrossFit WOD",        instructor: "Jake Torres",   durationMinutes: 60, level: "advanced",     location: "Weight Room", totalSpots: 14, description: "Workout of the day — varied functional movements" },
-  { day: 2, hour: 18, minute: 30, name: "Stretch & Recover",   instructor: "Sarah Chen",    durationMinutes: 30, level: "beginner",     location: "Studio B", totalSpots: 20, description: "Active recovery and deep stretching" },
+  { day: 2, hour: 17, minute: 0,  name: "Teens Nogi",          instructor: "Caz",           durationMinutes: 60,  level: "9-15 yrs old",    location: "Main mat", totalSpots: 20, description: "" },
+  { day: 2, hour: 18, minute: 0,  name: "MMA Striking",        instructor: "Jamie",           durationMinutes: 60,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
+  { day: 2, hour: 19, minute: 0,  name: "BJJ Fundamentals",    instructor: "Chris",           durationMinutes: 90,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
 
   // Wednesday
-  { day: 3, hour: 6,  minute: 0,  name: "Morning HIIT",        instructor: "Coach Mike",    durationMinutes: 45, level: "intermediate", location: "Studio A", totalSpots: 20, description: "High intensity interval training to start your day" },
-  { day: 3, hour: 10, minute: 0,  name: "Barre Sculpt",        instructor: "Lisa Park",     durationMinutes: 50, level: "intermediate", location: "Studio B", totalSpots: 15, description: "Ballet-inspired toning and sculpting" },
-  { day: 3, hour: 12, minute: 0,  name: "Lunch Burn",          instructor: "Coach Mike",    durationMinutes: 30, level: "intermediate", location: "Studio A", totalSpots: 25, description: "Quick midday cardio blast" },
-  { day: 3, hour: 17, minute: 30, name: "Strength Training",   instructor: "Jake Torres",   durationMinutes: 60, level: "advanced",     location: "Weight Room", totalSpots: 12, description: "Barbell and dumbbell compound lifts" },
+  { day: 3, hour: 17, minute: 0,  name: "Teens BJJ",           instructor: "Jamie",           durationMinutes: 60,  level: "9-15 yrs old",    location: "Main mat", totalSpots: 20, description: "" },
+  { day: 3, hour: 18, minute: 0,  name: "MMA",                 instructor: "Jamie",           durationMinutes: 60,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
+  { day: 3, hour: 19, minute: 0,  name: "Advanced BJJ",        instructor: "Simon",           durationMinutes: 90,  level: "coloured belts",  location: "Main mat", totalSpots: 25, description: "" },
 
   // Thursday
-  { day: 4, hour: 6,  minute: 0,  name: "Spin Class",          instructor: "Lisa Park",     durationMinutes: 45, level: "intermediate", location: "Spin Room", totalSpots: 20, description: "Indoor cycling with intervals" },
-  { day: 4, hour: 9,  minute: 0,  name: "Yoga Flow",           instructor: "Sarah Chen",    durationMinutes: 60, level: "beginner",     location: "Studio B", totalSpots: 15, description: "Gentle yoga flow for all levels" },
-  { day: 4, hour: 17, minute: 0,  name: "CrossFit WOD",        instructor: "Jake Torres",   durationMinutes: 60, level: "advanced",     location: "Weight Room", totalSpots: 14, description: "Workout of the day — varied functional movements" },
-  { day: 4, hour: 19, minute: 0,  name: "Boxing Fundamentals", instructor: "Coach Mike",    durationMinutes: 45, level: "beginner",     location: "Studio A", totalSpots: 16, description: "Learn boxing basics and get a great workout" },
+  { day: 4, hour: 18, minute: 0,  name: "MMA Striking",        instructor: "Jamie",           durationMinutes: 60,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
+  { day: 4, hour: 19, minute: 0,  name: "BJJ",                 instructor: "Chris",           durationMinutes: 90,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
 
   // Friday
-  { day: 5, hour: 6,  minute: 0,  name: "Morning HIIT",        instructor: "Coach Mike",    durationMinutes: 45, level: "intermediate", location: "Studio A", totalSpots: 20, description: "High intensity interval training to start your day" },
-  { day: 5, hour: 9,  minute: 30, name: "Pilates Core",        instructor: "Sarah Chen",    durationMinutes: 50, level: "beginner",     location: "Studio B", totalSpots: 15, description: "Core-focused pilates session" },
-  { day: 5, hour: 12, minute: 0,  name: "Lunch Burn",          instructor: "Coach Mike",    durationMinutes: 30, level: "intermediate", location: "Studio A", totalSpots: 25, description: "Quick midday cardio blast" },
-  { day: 5, hour: 17, minute: 0,  name: "Open Gym",            instructor: "Jake Torres",   durationMinutes: 90, level: "beginner",     location: "Weight Room", totalSpots: 30, description: "Open floor with coaching available" },
-
+  
   // Saturday
-  { day: 6, hour: 8,  minute: 0,  name: "Weekend Warrior HIIT", instructor: "Coach Mike",   durationMinutes: 60, level: "advanced",     location: "Studio A", totalSpots: 20, description: "Extended HIIT session to crush the weekend" },
-  { day: 6, hour: 10, minute: 0,  name: "Yoga Flow",            instructor: "Sarah Chen",   durationMinutes: 75, level: "beginner",     location: "Studio B", totalSpots: 18, description: "Extended weekend yoga flow" },
-  { day: 6, hour: 12, minute: 0,  name: "Kickboxing",           instructor: "Coach Mike",   durationMinutes: 45, level: "intermediate", location: "Studio A", totalSpots: 16, description: "Cardio kickboxing combinations" },
+  { day: 6, hour: 10, minute: 0,  name: "BJJ Fundamentals",    instructor: "Simon",           durationMinutes: 60,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
+  { day: 6, hour: 11, minute: 0,  name: "Open Mat",            instructor: "Simon",           durationMinutes: 90,  level: "all levels",      location: "Main mat", totalSpots: 30, description: "" },
 
   // Sunday
-  { day: 0, hour: 9,  minute: 0,  name: "Stretch & Recover",   instructor: "Sarah Chen",    durationMinutes: 45, level: "beginner",     location: "Studio B", totalSpots: 20, description: "Active recovery and deep stretching" },
-  { day: 0, hour: 10, minute: 30, name: "Open Gym",            instructor: "Jake Torres",   durationMinutes: 120, level: "beginner",    location: "Weight Room", totalSpots: 30, description: "Open floor with coaching available" },
 ];
 
 // ============================================================
