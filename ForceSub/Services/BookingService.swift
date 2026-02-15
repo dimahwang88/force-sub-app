@@ -41,7 +41,7 @@ final class BookingService {
             "instructor": gymClass.instructor,
             "classDateTime": Timestamp(date: gymClass.dateTime),
             "classDurationMinutes": gymClass.durationMinutes,
-            "classLevel": gymClass.level.rawValue,
+            "classLevel": gymClass.level,
             "location": gymClass.location,
             "bookedAt": Timestamp(date: Date()),
             "status": BookingStatus.confirmed.rawValue

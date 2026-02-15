@@ -34,7 +34,7 @@ const db = getFirestore();
 // Edit this to change your recurring classes.
 // day: 0 = Sunday, 1 = Monday, ... 6 = Saturday
 // hour/minute: 24-hour format
-// level: "beginner" | "intermediate" | "advanced"
+// level: any string (e.g. "all levels", "beginner", "9-15 yrs old")
 // ============================================================
 const weeklyTemplate = [
   // Monday
@@ -71,7 +71,6 @@ const weeklyTemplate = [
 // Script logic — no need to edit below
 // ============================================================
 
-const VALID_LEVELS = ["beginner", "intermediate", "advanced"];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const args = process.argv.slice(2);
@@ -91,7 +90,7 @@ function validateTemplate() {
     if (typeof t.hour !== "number" || t.hour < 0 || t.hour > 23) errors.push(`${label}: hour must be 0-23`);
     if (typeof t.minute !== "number" || t.minute < 0 || t.minute > 59) errors.push(`${label}: minute must be 0-59`);
     if (typeof t.durationMinutes !== "number" || t.durationMinutes <= 0) errors.push(`${label}: durationMinutes must be > 0`);
-    if (!VALID_LEVELS.includes(t.level)) errors.push(`${label}: level must be one of ${VALID_LEVELS.join(", ")}`);
+    if (typeof t.level !== "string" || !t.level) errors.push(`${label}: missing level`);
     if (typeof t.location !== "string" || !t.location) errors.push(`${label}: missing location`);
     if (typeof t.description !== "string") errors.push(`${label}: missing description`);
     if (typeof t.totalSpots !== "number" || t.totalSpots <= 0) errors.push(`${label}: totalSpots must be > 0`);
@@ -249,9 +248,7 @@ async function verifyClasses() {
     console.log("  All required fields present.");
   }
 
-  if (!VALID_LEVELS.includes(sample.level)) {
-    console.log(`  WARNING: level="${sample.level}" is not one of ${VALID_LEVELS.join(", ")}`);
-  }
+  console.log(`  Sample level value: "${sample.level}"`);
 }
 
 async function main() {
