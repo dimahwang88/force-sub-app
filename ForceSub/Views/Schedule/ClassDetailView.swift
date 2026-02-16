@@ -70,7 +70,7 @@ struct ClassDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                ClassLevelBadge(level: viewModel.gymClass.level)
+                ClassLevelBadge(level: viewModel.gymClass.level.rawValue)
                 Spacer()
                 SpotCountView(
                     available: viewModel.gymClass.availableSpots,
