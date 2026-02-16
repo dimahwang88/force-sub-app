@@ -31,15 +31,20 @@ struct ProfileView: View {
                 }
             }
 
-            // Belt rank (if set)
-            if let beltRank = viewModel.user?.beltRank {
-                Section("Training") {
+            // Training section
+            Section("Training") {
+                if let beltRank = viewModel.user?.beltRank {
                     HStack {
                         Text("Belt Rank")
                         Spacer()
                         Text(beltRank.capitalized)
                             .foregroundStyle(.secondary)
                     }
+                }
+                NavigationLink {
+                    AttendanceDashboardView()
+                } label: {
+                    Label("Attendance Dashboard", systemImage: "chart.bar.fill")
                 }
             }
 
