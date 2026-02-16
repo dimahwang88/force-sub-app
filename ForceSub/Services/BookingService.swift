@@ -123,6 +123,15 @@ final class BookingService {
             .sorted { $0.classDateTime < $1.classDateTime }
     }
 
+    /// Fetch all confirmed bookings across all users (admin only).
+    func fetchAllBookings() async throws -> [Booking] {
+        let snapshot = try await db.collection(bookingsCollection).getDocuments()
+        return snapshot.documents
+            .compactMap { try? $0.data(as: Booking.self) }
+            .filter { $0.status == .confirmed }
+            .sorted { $0.classDateTime < $1.classDateTime }
+    }
+
     /// Check if user already has a confirmed booking for a specific class.
     func existingBooking(userId: String, classId: String) async throws -> Booking? {
         let snapshot = try await db.collection(bookingsCollection)

@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct AttendanceDashboardView: View {
-    @Environment(AuthViewModel.self) private var authViewModel
+struct AdminCustomerDetailView: View {
+    let customer: CustomerSummary
     @State private var viewModel = AttendanceDashboardViewModel()
 
     var body: some View {
@@ -18,20 +18,15 @@ struct AttendanceDashboardView: View {
                 ContentUnavailableView(
                     "No Attendance Yet",
                     systemImage: "chart.bar",
-                    description: Text("Once you attend classes, your stats will appear here.")
+                    description: Text("This customer hasn't attended any classes yet.")
                 )
             } else {
                 dashboardContent
             }
         }
-        .navigationTitle("Attendance")
+        .navigationTitle(customer.user.displayName)
         .task {
-            if let userId = authViewModel.currentUserId {
-                await viewModel.loadAttendance(userId: userId)
-            }
-        }
-        .refreshable {
-            if let userId = authViewModel.currentUserId {
+            if let userId = customer.user.id {
                 await viewModel.loadAttendance(userId: userId)
             }
         }
@@ -39,6 +34,7 @@ struct AttendanceDashboardView: View {
 
     private var dashboardContent: some View {
         List {
+            customerInfoSection
             overviewSection
             averagesSection
             classBreakdownSection
@@ -46,10 +42,26 @@ struct AttendanceDashboardView: View {
         .listStyle(.insetGrouped)
     }
 
+    // MARK: - Customer Info
+
+    private var customerInfoSection: some View {
+        Section("Customer Info") {
+            InfoRow(label: "Name", value: customer.user.displayName)
+            InfoRow(label: "Email", value: customer.user.email)
+            if let phone = customer.user.phone {
+                InfoRow(label: "Phone", value: phone)
+            }
+            if let belt = customer.user.beltRank {
+                InfoRow(label: "Belt Rank", value: belt.capitalized)
+            }
+            InfoRow(label: "Member Since", value: customer.user.createdAt.formattedShort)
+        }
+    }
+
     // MARK: - Overview
 
     private var overviewSection: some View {
-        Section("Overview") {
+        Section("Attendance Overview") {
             StatRow(
                 icon: "checkmark.circle.fill",
                 iconColor: .green,
@@ -120,3 +132,38 @@ struct AttendanceDashboardView: View {
     }
 }
 
+// MARK: - Reusable Components
+
+struct StatRow: View {
+    let icon: String
+    let iconColor: Color
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundStyle(iconColor)
+                .frame(width: 24)
+            Text(label)
+            Spacer()
+            Text(value)
+                .font(.body.bold())
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+private struct InfoRow: View {
+    let label: String
+    let value: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+        }
+    }
+}

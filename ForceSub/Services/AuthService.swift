@@ -41,6 +41,12 @@ final class AuthService {
         return try? doc.data(as: AppUser.self)
     }
 
+    /// Fetch all users (admin only).
+    func fetchAllUsers() async throws -> [AppUser] {
+        let snapshot = try await db.collection("users").getDocuments()
+        return snapshot.documents.compactMap { try? $0.data(as: AppUser.self) }
+    }
+
     var currentUserId: String? {
         auth.currentUser?.uid
     }
