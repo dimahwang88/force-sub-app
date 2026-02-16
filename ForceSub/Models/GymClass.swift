@@ -3,14 +3,14 @@ import FirebaseFirestore
 
 struct GymClass: Codable, Identifiable, Hashable {
     @DocumentID var id: String?
-    let name: String
-    let instructor: String
-    let dateTime: Date
-    let durationMinutes: Int
-    let level: String
-    let description: String
-    let location: String
-    let totalSpots: Int
+    var name: String
+    var instructor: String
+    var dateTime: Date
+    var durationMinutes: Int
+    var level: ClassLevel
+    var description: String
+    var location: String
+    var totalSpots: Int
     var bookedCount: Int
 
     var availableSpots: Int {
