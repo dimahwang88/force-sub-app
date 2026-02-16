@@ -1,16 +1,6 @@
 import Foundation
 import FirebaseFirestore
 
-enum ClassLevel: String, Codable, CaseIterable {
-    case beginner
-    case intermediate
-    case advanced
-
-    var displayName: String {
-        rawValue.capitalized
-    }
-}
-
 struct GymClass: Codable, Identifiable, Hashable {
     @DocumentID var id: String?
     var name: String

@@ -1,0 +1,16 @@
+# Firebase service account key (secret — never commit)
+scripts/serviceAccountKey.json
+
+# Node
+scripts/node_modules/
+
+# Xcode
+*.xcuserstate
+xcuserdata/
+DerivedData/
+
+# Firebase config (contains API keys)
+GoogleService-Info.plist
+
+# macOS
+.DS_Store

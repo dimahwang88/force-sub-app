@@ -14,7 +14,7 @@ struct Booking: Codable, Identifiable {
     let instructor: String
     let classDateTime: Date
     let classDurationMinutes: Int
-    let classLevel: ClassLevel
+    let classLevel: String
     let location: String
     let bookedAt: Date
     var status: BookingStatus

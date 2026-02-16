@@ -1,10 +1,10 @@
 import SwiftUI
 
 struct ClassLevelBadge: View {
-    let level: ClassLevel
+    let level: String
 
     var body: some View {
-        Text(level.displayName)
+        Text(level.capitalized)
             .font(.caption2.bold())
             .foregroundStyle(.white)
             .padding(.horizontal, 8)
