@@ -1,8 +1,14 @@
 import SwiftUI
 
 struct ScheduleView: View {
+    @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = ScheduleViewModel()
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
+    @State private var showAddClass = false
+
+    private var isAdmin: Bool {
+        authViewModel.currentUser?.admin ?? false
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -11,6 +17,27 @@ struct ScheduleView: View {
             classList
         }
         .navigationTitle("Schedule")
+        .toolbar {
+            if isAdmin {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showAddClass = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showAddClass) {
+            NavigationStack {
+                EditClassView()
+            }
+        }
+        .onChange(of: showAddClass) { _, isPresented in
+            if !isPresented {
+                Task { await viewModel.loadClasses(for: selectedDate) }
+            }
+        }
         .task {
             await viewModel.loadClasses(for: selectedDate)
         }

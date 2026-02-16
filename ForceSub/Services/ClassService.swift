@@ -18,12 +18,35 @@ final class ClassService {
             .getDocuments()
 
         return snapshot.documents.compactMap { doc in
-            try? doc.data(as: GymClass.self)
+            do {
+                return try doc.data(as: GymClass.self)
+            } catch {
+                print("⚠️ Failed to decode class \(doc.documentID): \(error)")
+                return nil
+            }
         }
     }
 
     func fetchClass(id: String) async throws -> GymClass? {
         let doc = try await db.collection(collectionName).document(id).getDocument()
-        return try? doc.data(as: GymClass.self)
+        do {
+            return try doc.data(as: GymClass.self)
+        } catch {
+            print("⚠️ Failed to decode class \(doc.documentID): \(error)")
+            return nil
+        }
+    }
+
+    func addClass(_ gymClass: GymClass) async throws {
+        try db.collection(collectionName).addDocument(from: gymClass)
+    }
+
+    func updateClass(_ gymClass: GymClass) async throws {
+        guard let id = gymClass.id else { return }
+        try db.collection(collectionName).document(id).setData(from: gymClass, merge: true)
+    }
+
+    func deleteClass(id: String) async throws {
+        try await db.collection(collectionName).document(id).delete()
     }
 }

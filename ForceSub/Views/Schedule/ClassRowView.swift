@@ -23,7 +23,7 @@ struct ClassRowView: View {
                 HStack {
                     Text(gymClass.name)
                         .font(.body.bold())
-                    ClassLevelBadge(level: gymClass.level)
+                    ClassLevelBadge(level: gymClass.level.rawValue)
                 }
 
                 Text(gymClass.instructor)

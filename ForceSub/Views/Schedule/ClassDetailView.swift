@@ -4,6 +4,11 @@ struct ClassDetailView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel: ClassDetailViewModel
     @State private var showCancelConfirmation = false
+    @State private var showEditClass = false
+
+    private var isAdmin: Bool {
+        authViewModel.currentUser?.admin ?? false
+    }
 
     init(gymClass: GymClass) {
         _viewModel = State(initialValue: ClassDetailViewModel(gymClass: gymClass))
@@ -24,6 +29,27 @@ struct ClassDetailView: View {
         }
         .navigationTitle(viewModel.gymClass.name)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if isAdmin {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showEditClass = true
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showEditClass) {
+            NavigationStack {
+                EditClassView(gymClass: viewModel.gymClass)
+            }
+        }
+        .onChange(of: showEditClass) { _, isPresented in
+            if !isPresented {
+                Task { await viewModel.refreshClass() }
+            }
+        }
         .task {
             if let userId = authViewModel.currentUserId {
                 await viewModel.checkExistingBooking(userId: userId)
@@ -44,7 +70,7 @@ struct ClassDetailView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                ClassLevelBadge(level: viewModel.gymClass.level)
+                ClassLevelBadge(level: viewModel.gymClass.level.rawValue)
                 Spacer()
                 SpotCountView(
                     available: viewModel.gymClass.availableSpots,

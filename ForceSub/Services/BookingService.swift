@@ -115,22 +115,22 @@ final class BookingService {
     func fetchBookings(userId: String) async throws -> [Booking] {
         let snapshot = try await db.collection(bookingsCollection)
             .whereField("userId", isEqualTo: userId)
-            .whereField("status", isEqualTo: BookingStatus.confirmed.rawValue)
-            .order(by: "classDateTime", descending: false)
             .getDocuments()
 
-        return snapshot.documents.compactMap { try? $0.data(as: Booking.self) }
+        return snapshot.documents
+            .compactMap { try? $0.data(as: Booking.self) }
+            .filter { $0.status == .confirmed }
+            .sorted { $0.classDateTime < $1.classDateTime }
     }
 
     /// Check if user already has a confirmed booking for a specific class.
     func existingBooking(userId: String, classId: String) async throws -> Booking? {
         let snapshot = try await db.collection(bookingsCollection)
             .whereField("userId", isEqualTo: userId)
-            .whereField("classId", isEqualTo: classId)
-            .whereField("status", isEqualTo: BookingStatus.confirmed.rawValue)
-            .limit(to: 1)
             .getDocuments()
 
-        return snapshot.documents.first.flatMap { try? $0.data(as: Booking.self) }
+        return snapshot.documents
+            .compactMap { try? $0.data(as: Booking.self) }
+            .first { $0.classId == classId && $0.status == .confirmed }
     }
 }
