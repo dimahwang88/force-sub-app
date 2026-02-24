@@ -5,8 +5,25 @@ struct ProfileView: View {
     @State private var viewModel = ProfileViewModel()
 
     var body: some View {
+        Group {
+            if viewModel.isLoading {
+                LoadingView(message: "Loading profile...")
+            } else {
+                profileContent
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Profile")
+        .task {
+            if let userId = authViewModel.currentUserId {
+                await viewModel.loadProfile(userId: userId)
+            }
+        }
+    }
+
+    private var profileContent: some View {
         List {
-            // User info section
+            // User info + belt section
             Section {
                 if let user = viewModel.user {
                     HStack(spacing: 16) {
@@ -22,24 +39,72 @@ struct ProfileView: View {
                         }
                     }
                     .padding(.vertical, 4)
-                } else if viewModel.isLoading {
-                    HStack {
-                        ProgressView()
-                        Text("Loading profile...")
-                            .foregroundStyle(.secondary)
+
+                    // Belt rank
+                    if let beltRank = user.beltRank, !beltRank.isEmpty {
+                        HStack {
+                            Label {
+                                Text("Belt Rank")
+                            } icon: {
+                                Image(systemName: "circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.beltColor(for: beltRank))
+                            }
+                            Spacer()
+                            Text(beltRank.capitalized)
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.beltColor(for: beltRank))
+                        }
                     }
                 }
             }
 
-            // Belt rank (if set)
-            if let beltRank = viewModel.user?.beltRank {
-                Section("Training") {
+            // Attendance stats section
+            Section("Attendance") {
+                HStack {
+                    Label("Classes Attended", systemImage: "checkmark.circle.fill")
+                    Spacer()
+                    Text("\(viewModel.attendedCount)")
+                        .font(.title3.bold())
+                        .foregroundStyle(Color.appPrimary)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Activity")
+                        .font(.subheadline.bold())
+                    AttendanceHeatmapView(attendanceDays: viewModel.attendanceDays)
+                }
+                .padding(.vertical, 4)
+            }
+
+            // Upcoming bookings section
+            Section {
+                if viewModel.upcomingBookings.isEmpty {
                     HStack {
-                        Text("Belt Rank")
                         Spacer()
-                        Text(beltRank.capitalized)
-                            .foregroundStyle(.secondary)
+                        VStack(spacing: 8) {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.title2)
+                                .foregroundStyle(.secondary)
+                            Text("No upcoming bookings")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
                     }
+                    .padding(.vertical, 8)
+                } else {
+                    ForEach(viewModel.upcomingBookings) { booking in
+                        BookingRowView(booking: booking)
+                    }
+                }
+            } header: {
+                HStack {
+                    Text("Upcoming Bookings")
+                    Spacer()
+                    Text("\(viewModel.upcomingBookings.count)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -48,13 +113,6 @@ struct ProfileView: View {
                 Button("Sign Out", role: .destructive) {
                     authViewModel.signOut()
                 }
-            }
-        }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Profile")
-        .task {
-            if let userId = authViewModel.currentUserId {
-                await viewModel.loadProfile(userId: userId)
             }
         }
     }
