@@ -66,7 +66,7 @@ struct ProfileView: View {
                     Spacer()
                     Text("\(viewModel.attendedCount)")
                         .font(.title3.bold())
-                        .foregroundStyle(.appPrimary)
+                        .foregroundStyle(Color.appPrimary)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
