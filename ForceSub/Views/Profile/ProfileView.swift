@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = ProfileViewModel()
+    @State private var showSelfieCaptureSheet = false
 
     var body: some View {
         Group {
@@ -19,6 +20,14 @@ struct ProfileView: View {
                 await viewModel.loadProfile(userId: userId)
             }
         }
+        .sheet(isPresented: $showSelfieCaptureSheet) {
+            SelfieCaptureView()
+        }
+        .onChange(of: showSelfieCaptureSheet) { _, isPresented in
+            if !isPresented, let userId = authViewModel.currentUserId {
+                Task { await viewModel.loadProfile(userId: userId) }
+            }
+        }
     }
 
     private var profileContent: some View {
@@ -27,9 +36,8 @@ struct ProfileView: View {
             Section {
                 if let user = viewModel.user {
                     HStack(spacing: 16) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 50))
-                            .foregroundStyle(.secondary)
+                        selfieAvatar(url: user.selfieURL)
+                            .onTapGesture { showSelfieCaptureSheet = true }
                         VStack(alignment: .leading, spacing: 4) {
                             Text(user.displayName)
                                 .font(.title3.bold())
@@ -108,6 +116,24 @@ struct ProfileView: View {
                 }
             }
 
+            // Selfie / Face Recognition section
+            Section("Face Recognition") {
+                HStack {
+                    Label {
+                        Text(viewModel.user?.selfieURL != nil ? "Selfie on file" : "No selfie on file")
+                    } icon: {
+                        Image(systemName: viewModel.user?.selfieURL != nil
+                              ? "checkmark.circle.fill" : "exclamationmark.circle")
+                            .foregroundStyle(viewModel.user?.selfieURL != nil ? .green : .orange)
+                    }
+                    Spacer()
+                    Button(viewModel.user?.selfieURL != nil ? "Update" : "Add") {
+                        showSelfieCaptureSheet = true
+                    }
+                    .font(.subheadline)
+                }
+            }
+
             // Account section
             Section {
                 Button("Sign Out", role: .destructive) {
@@ -115,5 +141,36 @@ struct ProfileView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func selfieAvatar(url: String?) -> some View {
+        if let urlString = url, let imageURL = URL(string: urlString) {
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                case .failure:
+                    defaultAvatar
+                case .empty:
+                    ProgressView()
+                        .frame(width: 50, height: 50)
+                @unknown default:
+                    defaultAvatar
+                }
+            }
+            .frame(width: 50, height: 50)
+            .clipShape(Circle())
+        } else {
+            defaultAvatar
+        }
+    }
+
+    private var defaultAvatar: some View {
+        Image(systemName: "person.circle.fill")
+            .font(.system(size: 50))
+            .foregroundStyle(.secondary)
     }
 }
