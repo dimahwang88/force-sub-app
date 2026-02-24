@@ -1,5 +1,11 @@
 import SwiftUI
 
+private struct MonthLabel: Identifiable {
+    let id: Int
+    let label: String
+    let column: Int
+}
+
 struct AttendanceHeatmapView: View {
     let attendanceDays: [Date: Int]
 
@@ -42,17 +48,7 @@ struct AttendanceHeatmapView: View {
                         ForEach(0..<columns, id: \.self) { col in
                             VStack(spacing: cellSpacing) {
                                 ForEach(0..<7, id: \.self) { row in
-                                    let date = dateFor(column: col, row: row)
-                                    let count = attendanceDays[calendar.startOfDay(for: date)] ?? 0
-                                    let isFuture = date > Date()
-
-                                    RoundedRectangle(cornerRadius: 2)
-                                        .fill(isFuture ? Color.clear : Color.heatmapColor(count: count))
-                                        .frame(width: cellSize, height: cellSize)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 2)
-                                                .stroke(isFuture ? Color(.systemGray5) : .clear, lineWidth: 0.5)
-                                        )
+                                    cellView(column: col, row: row)
                                 }
                             }
                         }
@@ -78,18 +74,32 @@ struct AttendanceHeatmapView: View {
         }
     }
 
+    @ViewBuilder
+    private func cellView(column: Int, row: Int) -> some View {
+        let date = dateFor(column: column, row: row)
+        let count = attendanceDays[calendar.startOfDay(for: date)] ?? 0
+        let isFuture = date > Date()
+
+        RoundedRectangle(cornerRadius: 2)
+            .fill(isFuture ? Color.clear : Color.heatmapColor(count: count))
+            .frame(width: cellSize, height: cellSize)
+            .overlay(
+                RoundedRectangle(cornerRadius: 2)
+                    .stroke(isFuture ? Color(uiColor: .systemGray5) : .clear, lineWidth: 0.5)
+            )
+    }
+
     private var monthLabelsRow: some View {
-        let months = monthPositions()
-        return HStack(spacing: 0) {
+        HStack(spacing: 0) {
             // Offset for day labels column
             Color.clear.frame(width: 28)
             ZStack(alignment: .leading) {
                 Color.clear.frame(height: 14)
-                ForEach(months, id: \.offset) { item in
+                ForEach(monthPositions()) { item in
                     Text(item.label)
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary)
-                        .offset(x: CGFloat(item.offset) * (cellSize + cellSpacing))
+                        .offset(x: CGFloat(item.column) * (cellSize + cellSpacing))
                 }
             }
         }
@@ -100,16 +110,16 @@ struct AttendanceHeatmapView: View {
         return calendar.date(byAdding: .day, value: dayOffset, to: gridStartDate)!
     }
 
-    private func monthPositions() -> [(label: String, offset: Int)] {
+    private func monthPositions() -> [MonthLabel] {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM"
-        var result: [(label: String, offset: Int)] = []
+        var result: [MonthLabel] = []
         var lastMonth = -1
         for col in 0..<columns {
             let date = dateFor(column: col, row: 0)
             let month = calendar.component(.month, from: date)
             if month != lastMonth {
-                result.append((label: formatter.string(from: date), offset: col))
+                result.append(MonthLabel(id: col, label: formatter.string(from: date), column: col))
                 lastMonth = month
             }
         }
