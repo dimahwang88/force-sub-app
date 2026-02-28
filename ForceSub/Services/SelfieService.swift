@@ -58,12 +58,10 @@ final class SelfieService {
 
         do {
             try await storageRef.delete()
-        } catch {
-            // If the file doesn't exist, that's fine — continue to clear Firestore
-            let nsError = error as NSError
-            if nsError.domain == StorageErrorDomain,
-               nsError.code == StorageErrorCode.objectNotFound.rawValue {
-                // File already deleted or never existed
+        } catch let error as NSError {
+            // StorageErrorCode.objectNotFound == 404 — file already gone
+            if error.code == StorageErrorCode.objectNotFound.rawValue {
+                // File already deleted or never existed — continue
             } else {
                 throw error
             }
