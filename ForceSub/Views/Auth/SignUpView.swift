@@ -77,7 +77,7 @@ struct SignUpView: View {
                 } label: {
                     Text(showAdminCode ? "Remove admin code" : "I have an admin invite code")
                         .font(.footnote)
-                        .foregroundStyle(.appPrimary)
+                        .foregroundStyle(Color.appPrimary)
                 }
             }
             .padding(.horizontal)
