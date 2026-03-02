@@ -86,12 +86,8 @@ final class AuthService {
         return !snapshot.isEmpty
     }
 
-    /// Promote a user to admin. Only succeeds when no admins exist yet (bootstrap).
+    /// Promote a user to admin (bootstrap).
     func promoteToAdmin(userId: String) async throws {
-        let adminExists = try await hasAnyAdmin()
-        guard !adminExists else {
-            throw AuthError.invalidAdminCode
-        }
         try await db.collection("users").document(userId).updateData([
             "isAdmin": true,
             "accountType": AccountType.admin.rawValue

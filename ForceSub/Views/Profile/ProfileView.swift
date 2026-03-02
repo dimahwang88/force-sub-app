@@ -141,17 +141,15 @@ struct ProfileView: View {
             // Admin section — only shown for non-admin users
             if authViewModel.currentUser?.admin != true {
                 Section {
-                    if noAdminExists {
-                        // Bootstrap: no admin exists yet
-                        Button {
-                            Task {
-                                await authViewModel.becomeAdmin()
-                                noAdminExists = false
-                            }
-                        } label: {
-                            Label("Become Admin", systemImage: "shield.checkered")
+                    Button {
+                        Task {
+                            await authViewModel.becomeAdmin()
                         }
-                    } else if showAdminCodeField {
+                    } label: {
+                        Label("Become Admin", systemImage: "shield.checkered")
+                    }
+
+                    if showAdminCodeField {
                         TextField("Admin Invite Code", text: $adminCode)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
@@ -173,11 +171,7 @@ struct ProfileView: View {
                         }
                     }
                 } footer: {
-                    if noAdminExists {
-                        Text("No admin account exists yet. Tap to make this the admin account.")
-                    } else {
-                        Text("Enter an invite code from an admin to get admin access.")
-                    }
+                    Text("Become admin or enter an invite code from an existing admin.")
                 }
             }
 
