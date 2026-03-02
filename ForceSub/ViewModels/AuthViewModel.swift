@@ -109,6 +109,20 @@ final class AuthViewModel {
         isLoading = false
     }
 
+    /// Redeem an admin invite code to promote the current user.
+    func redeemAdminCode(_ code: String) async {
+        guard let userId = currentUserId else { return }
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authService.promoteWithCode(userId: userId, code: code)
+            currentUser = try await authService.fetchUser(userId: userId)
+        } catch {
+            errorMessage = "Invalid or expired admin code."
+        }
+        isLoading = false
+    }
+
     private func fetchUserProfile(userId: String) async {
         do {
             currentUser = try await authService.fetchUser(userId: userId)

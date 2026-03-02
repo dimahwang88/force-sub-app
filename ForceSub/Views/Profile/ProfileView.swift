@@ -5,6 +5,8 @@ struct ProfileView: View {
     @State private var viewModel = ProfileViewModel()
     @State private var showSelfieCaptureSheet = false
     @State private var noAdminExists = false
+    @State private var adminCode = ""
+    @State private var showAdminCodeField = false
 
     var body: some View {
         Group {
@@ -136,19 +138,46 @@ struct ProfileView: View {
                 }
             }
 
-            // Admin bootstrap — only shown when no admin account exists yet
-            if noAdminExists && authViewModel.currentUser?.admin != true {
+            // Admin section — only shown for non-admin users
+            if authViewModel.currentUser?.admin != true {
                 Section {
-                    Button {
-                        Task {
-                            await authViewModel.becomeAdmin()
-                            noAdminExists = false
+                    if noAdminExists {
+                        // Bootstrap: no admin exists yet
+                        Button {
+                            Task {
+                                await authViewModel.becomeAdmin()
+                                noAdminExists = false
+                            }
+                        } label: {
+                            Label("Become Admin", systemImage: "shield.checkered")
                         }
-                    } label: {
-                        Label("Become Admin", systemImage: "shield.checkered")
+                    } else if showAdminCodeField {
+                        TextField("Admin Invite Code", text: $adminCode)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                        Button {
+                            Task {
+                                await authViewModel.redeemAdminCode(adminCode)
+                                adminCode = ""
+                                showAdminCodeField = false
+                            }
+                        } label: {
+                            Label("Submit Code", systemImage: "checkmark.circle.fill")
+                        }
+                        .disabled(adminCode.isEmpty)
+                    } else {
+                        Button {
+                            showAdminCodeField = true
+                        } label: {
+                            Label("I have an admin invite code", systemImage: "shield.checkered")
+                        }
                     }
                 } footer: {
-                    Text("No admin account exists yet. Tap to make this the admin account.")
+                    if noAdminExists {
+                        Text("No admin account exists yet. Tap to make this the admin account.")
+                    } else {
+                        Text("Enter an invite code from an admin to get admin access.")
+                    }
                 }
             }
 

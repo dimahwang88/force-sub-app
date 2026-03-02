@@ -98,6 +98,23 @@ final class AuthService {
         ])
     }
 
+    /// Promote an existing user to admin using a valid invite code.
+    func promoteWithCode(userId: String, code: String) async throws {
+        let valid = try await validateAdminCode(code)
+        guard valid else { throw AuthError.invalidAdminCode }
+
+        try await db.collection("users").document(userId).updateData([
+            "isAdmin": true,
+            "accountType": AccountType.admin.rawValue
+        ])
+
+        // Mark the invite code as used
+        try? await db.collection("adminCodes").document(code).updateData([
+            "usedBy": userId,
+            "usedAt": FieldValue.serverTimestamp()
+        ])
+    }
+
     // MARK: - Private
 
     /// Check that the code exists in `adminCodes` collection and hasn't been used yet.
