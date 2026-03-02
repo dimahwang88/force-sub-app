@@ -237,7 +237,7 @@ private struct DailyAttendanceChartView: View {
                         VStack(spacing: 0) {
                             Spacer(minLength: 0)
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(item.count > 0 ? Color.appPrimary : Color(.systemGray5))
+                                .fill(item.count > 0 ? Color.blue : Color(uiColor: .systemGray5))
                                 .frame(height: max(2, CGFloat(item.count) / CGFloat(maxCount) * (geo.size.height - 20)))
                         }
                     }
