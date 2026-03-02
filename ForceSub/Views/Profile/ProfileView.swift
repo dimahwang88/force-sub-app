@@ -43,11 +43,19 @@ struct ProfileView: View {
                         selfieAvatar(url: user.selfieURL)
                             .onTapGesture { showSelfieCaptureSheet = true }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(user.displayName)
-                                .font(.title3.bold())
+                            HStack(spacing: 6) {
+                                Text(user.displayName)
+                                    .font(.title3.bold())
+                                Image(systemName: user.admin ? "shield.checkered" : "person.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(user.admin ? .blue : .secondary)
+                            }
                             Text(user.email)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                            Text(user.admin ? "Admin" : "Customer")
+                                .font(.caption)
+                                .foregroundStyle(user.admin ? .blue : .secondary)
                         }
                     }
                     .padding(.vertical, 4)
