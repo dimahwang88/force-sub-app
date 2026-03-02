@@ -4,6 +4,7 @@ struct ProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = ProfileViewModel()
     @State private var showSelfieCaptureSheet = false
+    @State private var noAdminExists = false
 
     var body: some View {
         Group {
@@ -19,6 +20,7 @@ struct ProfileView: View {
             if let userId = authViewModel.currentUserId {
                 await viewModel.loadProfile(userId: userId)
             }
+            noAdminExists = !(await authViewModel.checkAdminExists())
         }
         .sheet(isPresented: $showSelfieCaptureSheet) {
             SelfieCaptureView()
@@ -131,6 +133,22 @@ struct ProfileView: View {
                         showSelfieCaptureSheet = true
                     }
                     .font(.subheadline)
+                }
+            }
+
+            // Admin bootstrap — only shown when no admin account exists yet
+            if noAdminExists && authViewModel.currentUser?.admin != true {
+                Section {
+                    Button {
+                        Task {
+                            await authViewModel.becomeAdmin()
+                            noAdminExists = false
+                        }
+                    } label: {
+                        Label("Become Admin", systemImage: "shield.checkered")
+                    }
+                } footer: {
+                    Text("No admin account exists yet. Tap to make this the admin account.")
                 }
             }
 

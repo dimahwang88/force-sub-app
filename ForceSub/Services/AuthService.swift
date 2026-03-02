@@ -75,6 +75,29 @@ final class AuthService {
         auth.currentUser?.uid
     }
 
+    // MARK: - Admin Bootstrap
+
+    /// Returns true if at least one admin user exists in Firestore.
+    func hasAnyAdmin() async throws -> Bool {
+        let snapshot = try await db.collection("users")
+            .whereField("isAdmin", isEqualTo: true)
+            .limit(to: 1)
+            .getDocuments()
+        return !snapshot.isEmpty
+    }
+
+    /// Promote a user to admin. Only succeeds when no admins exist yet (bootstrap).
+    func promoteToAdmin(userId: String) async throws {
+        let adminExists = try await hasAnyAdmin()
+        guard !adminExists else {
+            throw AuthError.invalidAdminCode
+        }
+        try await db.collection("users").document(userId).updateData([
+            "isAdmin": true,
+            "accountType": AccountType.admin.rawValue
+        ])
+    }
+
     // MARK: - Private
 
     /// Check that the code exists in `adminCodes` collection and hasn't been used yet.

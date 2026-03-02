@@ -88,6 +88,27 @@ final class AuthViewModel {
         }
     }
 
+    // MARK: - Admin Bootstrap
+
+    /// Check if any admin account exists. If not, the current user can claim admin.
+    func checkAdminExists() async -> Bool {
+        (try? await authService.hasAnyAdmin()) ?? true
+    }
+
+    /// Promote the current user to admin (only works if no admins exist).
+    func becomeAdmin() async {
+        guard let userId = currentUserId else { return }
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authService.promoteToAdmin(userId: userId)
+            currentUser = try await authService.fetchUser(userId: userId)
+        } catch {
+            errorMessage = "Failed to become admin: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+
     private func fetchUserProfile(userId: String) async {
         do {
             currentUser = try await authService.fetchUser(userId: userId)
