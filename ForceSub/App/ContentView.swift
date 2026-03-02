@@ -6,11 +6,16 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authViewModel.isAuthenticated {
-                MainTabView()
+                if authViewModel.currentUser?.resolvedAccountType == .admin {
+                    AdminTabView()
+                } else {
+                    MainTabView()
+                }
             } else {
                 LoginView()
             }
         }
         .animation(.easeInOut, value: authViewModel.isAuthenticated)
+        .animation(.easeInOut, value: authViewModel.currentUser?.resolvedAccountType)
     }
 }

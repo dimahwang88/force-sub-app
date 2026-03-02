@@ -36,14 +36,15 @@ final class AuthViewModel {
         isLoading = false
     }
 
-    func signUp(email: String, password: String, displayName: String) async {
+    func signUp(email: String, password: String, displayName: String, accountType: AccountType = .customer) async {
         isLoading = true
         errorMessage = nil
         do {
             _ = try await authService.signUp(
                 email: email,
                 password: password,
-                displayName: displayName
+                displayName: displayName,
+                accountType: accountType
             )
         } catch {
             errorMessage = Self.friendlyMessage(for: error)

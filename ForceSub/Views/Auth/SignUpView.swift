@@ -7,6 +7,7 @@ struct SignUpView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var accountType: AccountType = .customer
 
     private var passwordsMatch: Bool {
         !password.isEmpty && password == confirmPassword
@@ -24,6 +25,14 @@ struct SignUpView: View {
                 .font(.largeTitle.bold())
 
             VStack(spacing: 16) {
+                // Account type picker
+                Picker("Account Type", selection: $accountType) {
+                    ForEach(AccountType.allCases, id: \.self) { type in
+                        Text(type.displayName).tag(type)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 TextField("Display Name", text: $displayName)
                     .textContentType(.name)
                     .padding()
@@ -71,7 +80,8 @@ struct SignUpView: View {
                     await authViewModel.signUp(
                         email: email,
                         password: password,
-                        displayName: displayName
+                        displayName: displayName,
+                        accountType: accountType
                     )
                     if authViewModel.errorMessage == nil {
                         dismiss()

@@ -18,14 +18,16 @@ final class AuthService {
         return result.user.uid
     }
 
-    func signUp(email: String, password: String, displayName: String) async throws -> String {
+    func signUp(email: String, password: String, displayName: String, accountType: AccountType = .customer) async throws -> String {
         let result = try await auth.createUser(withEmail: email, password: password)
         let userId = result.user.uid
 
         let user = AppUser(
             email: email,
             displayName: displayName,
-            createdAt: Date()
+            createdAt: Date(),
+            isAdmin: accountType == .admin,
+            accountType: accountType.rawValue
         )
         try db.collection("users").document(userId).setData(from: user)
 

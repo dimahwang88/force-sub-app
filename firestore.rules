@@ -17,17 +17,22 @@ service cloud.firestore {
          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['bookedCount']));
     }
 
-    // Bookings: users can read/create/update their own bookings only
+    // Bookings: users can read/create/update their own bookings;
+    // admins can read all bookings (for dashboard attendance data)
     match /bookings/{bookingId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update: if request.auth != null && resource.data.userId == request.auth.uid;
       allow delete: if false;
     }
 
-    // Users: users can read/write their own profile only
+    // Users: users can read/write their own profile;
+    // admins can read all user profiles (for dashboard)
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId || isAdmin());
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
