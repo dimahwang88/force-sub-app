@@ -2,6 +2,17 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 
+enum AuthError: LocalizedError {
+    case invalidAdminCode
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidAdminCode:
+            return "Invalid or expired admin invite code."
+        }
+    }
+}
+
 final class AuthService {
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
@@ -18,7 +29,16 @@ final class AuthService {
         return result.user.uid
     }
 
-    func signUp(email: String, password: String, displayName: String, accountType: AccountType = .customer) async throws -> String {
+    func signUp(email: String, password: String, displayName: String, adminCode: String? = nil) async throws -> String {
+        var accountType: AccountType = .customer
+
+        // Validate admin invite code before creating the account
+        if let code = adminCode, !code.isEmpty {
+            let valid = try await validateAdminCode(code)
+            guard valid else { throw AuthError.invalidAdminCode }
+            accountType = .admin
+        }
+
         let result = try await auth.createUser(withEmail: email, password: password)
         let userId = result.user.uid
 
@@ -30,6 +50,14 @@ final class AuthService {
             accountType: accountType.rawValue
         )
         try db.collection("users").document(userId).setData(from: user)
+
+        // Mark the invite code as used
+        if let code = adminCode, !code.isEmpty {
+            try? await db.collection("adminCodes").document(code).updateData([
+                "usedBy": userId,
+                "usedAt": FieldValue.serverTimestamp()
+            ])
+        }
 
         return userId
     }
@@ -45,5 +73,15 @@ final class AuthService {
 
     var currentUserId: String? {
         auth.currentUser?.uid
+    }
+
+    // MARK: - Private
+
+    /// Check that the code exists in `adminCodes` collection and hasn't been used yet.
+    private func validateAdminCode(_ code: String) async throws -> Bool {
+        let doc = try await db.collection("adminCodes").document(code).getDocument()
+        guard let data = doc.data() else { return false }
+        // Code is invalid if it's already been used
+        return data["usedBy"] == nil
     }
 }

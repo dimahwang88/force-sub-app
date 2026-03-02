@@ -7,7 +7,8 @@ struct SignUpView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
-    @State private var accountType: AccountType = .customer
+    @State private var adminCode = ""
+    @State private var showAdminCode = false
 
     private var passwordsMatch: Bool {
         !password.isEmpty && password == confirmPassword
@@ -25,14 +26,6 @@ struct SignUpView: View {
                 .font(.largeTitle.bold())
 
             VStack(spacing: 16) {
-                // Account type picker
-                Picker("Account Type", selection: $accountType) {
-                    ForEach(AccountType.allCases, id: \.self) { type in
-                        Text(type.displayName).tag(type)
-                    }
-                }
-                .pickerStyle(.segmented)
-
                 TextField("Display Name", text: $displayName)
                     .textContentType(.name)
                     .padding()
@@ -65,6 +58,27 @@ struct SignUpView: View {
                         .font(.footnote)
                         .foregroundStyle(.red)
                 }
+
+                // Admin invite code (hidden by default)
+                if showAdminCode {
+                    TextField("Admin Invite Code", text: $adminCode)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .padding()
+                        .background(.quaternary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                Button {
+                    withAnimation {
+                        showAdminCode.toggle()
+                        if !showAdminCode { adminCode = "" }
+                    }
+                } label: {
+                    Text(showAdminCode ? "Remove admin code" : "I have an admin invite code")
+                        .font(.footnote)
+                        .foregroundStyle(.appPrimary)
+                }
             }
             .padding(.horizontal)
 
@@ -81,7 +95,7 @@ struct SignUpView: View {
                         email: email,
                         password: password,
                         displayName: displayName,
-                        accountType: accountType
+                        adminCode: adminCode.isEmpty ? nil : adminCode.trimmingCharacters(in: .whitespaces)
                     )
                     if authViewModel.errorMessage == nil {
                         dismiss()

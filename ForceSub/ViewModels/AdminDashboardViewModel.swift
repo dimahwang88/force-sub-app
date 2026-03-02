@@ -5,8 +5,10 @@ import Observation
 final class AdminDashboardViewModel {
     var customers: [AppUser] = []
     var allBookings: [Booking] = []
+    var adminCodes: [AdminCode] = []
     var isLoading = false
     var errorMessage: String?
+    var generatedCode: String?
 
     private let adminService = AdminService()
     private let calendar = Calendar.current
@@ -101,12 +103,36 @@ final class AdminDashboardViewModel {
         do {
             async let customersTask = adminService.fetchAllCustomers()
             async let bookingsTask = adminService.fetchAllBookings()
+            async let codesTask = adminService.fetchAdminCodes()
             customers = try await customersTask
             allBookings = try await bookingsTask
+            adminCodes = try await codesTask
         } catch {
             errorMessage = "Failed to load dashboard data."
         }
         isLoading = false
+    }
+
+    // MARK: - Admin Invite Codes
+
+    func generateInviteCode(createdBy: String) async {
+        generatedCode = nil
+        do {
+            let code = try await adminService.generateAdminCode(createdBy: createdBy)
+            generatedCode = code
+            adminCodes = try await adminService.fetchAdminCodes()
+        } catch {
+            errorMessage = "Failed to generate invite code."
+        }
+    }
+
+    func deleteInviteCode(_ code: String) async {
+        do {
+            try await adminService.deleteAdminCode(code)
+            adminCodes.removeAll { $0.id == code }
+        } catch {
+            errorMessage = "Failed to delete invite code."
+        }
     }
 }
 

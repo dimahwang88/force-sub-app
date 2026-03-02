@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AdminDashboardView: View {
+    @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = AdminDashboardViewModel()
 
     var body: some View {
@@ -30,6 +31,58 @@ struct AdminDashboardView: View {
                 StatRow(icon: "person.2.fill", label: "Total Customers", value: "\(viewModel.totalCustomers)", color: .blue)
                 StatRow(icon: "checkmark.circle.fill", label: "Classes Attended", value: "\(viewModel.totalClassesAttended)", color: .green)
                 StatRow(icon: "calendar.badge.clock", label: "Upcoming Bookings", value: "\(viewModel.upcomingBookingsCount)", color: .orange)
+            }
+
+            // Admin Invite Codes
+            Section {
+                if let code = viewModel.generatedCode {
+                    HStack {
+                        Text(code)
+                            .font(.title3.monospaced().bold())
+                        Spacer()
+                        Button {
+                            UIPasteboard.general.string = code
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Button {
+                    Task {
+                        if let userId = authViewModel.currentUserId {
+                            await viewModel.generateInviteCode(createdBy: userId)
+                        }
+                    }
+                } label: {
+                    Label("Generate Invite Code", systemImage: "plus.circle.fill")
+                }
+
+                ForEach(viewModel.adminCodes) { code in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(code.id ?? "—")
+                                .font(.subheadline.monospaced())
+                            Text(code.isUsed ? "Used" : "Available")
+                                .font(.caption)
+                                .foregroundStyle(code.isUsed ? .red : .green)
+                        }
+                        Spacer()
+                        if !code.isUsed, let codeId = code.id {
+                            Button(role: .destructive) {
+                                Task { await viewModel.deleteInviteCode(codeId) }
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("Admin Invite Codes")
+            } footer: {
+                Text("Share an invite code with someone to let them sign up as an admin.")
             }
 
             // Daily attendance chart (last 30 days)
