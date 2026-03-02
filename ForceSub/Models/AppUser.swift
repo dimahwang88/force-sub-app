@@ -9,6 +9,8 @@ struct AppUser: Codable, Identifiable {
     var beltRank: String?
     var phone: String?
     var isAdmin: Bool?
+    /// Download URL for the user's selfie stored in Firebase Storage
+    var selfieURL: String?
 
     var admin: Bool {
         isAdmin ?? false

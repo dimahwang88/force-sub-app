@@ -47,7 +47,7 @@ final class BookingService {
             "status": BookingStatus.confirmed.rawValue
         ]
 
-        try await db.runTransaction { transaction, errorPointer in
+        _ = try await db.runTransaction { transaction, errorPointer in
             let classDoc: DocumentSnapshot
             do {
                 classDoc = try transaction.getDocument(classRef)
@@ -89,7 +89,7 @@ final class BookingService {
         let bookingRef = db.collection(bookingsCollection).document(bookingId)
         let classRef = db.collection(classesCollection).document(booking.classId)
 
-        try await db.runTransaction { transaction, errorPointer in
+        _ = try await db.runTransaction { transaction, errorPointer in
             transaction.updateData(
                 ["status": BookingStatus.cancelled.rawValue],
                 forDocument: bookingRef

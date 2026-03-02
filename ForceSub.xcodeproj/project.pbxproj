@@ -10,6 +10,7 @@
 		BAEDE6FF2F40D5D10011DCA7 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = BAEDE6FE2F40D5D10011DCA7 /* FirebaseAuth */; };
 		BAEDE7012F40D5D10011DCA7 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = BAEDE7002F40D5D10011DCA7 /* FirebaseCore */; };
 		BAEDE7032F40D5D10011DCA7 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = BAEDE7022F40D5D10011DCA7 /* FirebaseFirestore */; };
+		BAEDE7042F40D5D10011DCA7 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = BAEDE7052F40D5D10011DCA7 /* FirebaseStorage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +33,7 @@
 				BAEDE7012F40D5D10011DCA7 /* FirebaseCore in Frameworks */,
 				BAEDE6FF2F40D5D10011DCA7 /* FirebaseAuth in Frameworks */,
 				BAEDE7032F40D5D10011DCA7 /* FirebaseFirestore in Frameworks */,
+				BAEDE7042F40D5D10011DCA7 /* FirebaseStorage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -77,6 +79,7 @@
 				BAEDE6FE2F40D5D10011DCA7 /* FirebaseAuth */,
 				BAEDE7002F40D5D10011DCA7 /* FirebaseCore */,
 				BAEDE7022F40D5D10011DCA7 /* FirebaseFirestore */,
+				BAEDE7052F40D5D10011DCA7 /* FirebaseStorage */,
 			);
 			productName = ForceSub;
 			productReference = BAEDE6AD2F40D4110011DCA7 /* ForceSub.app */;
@@ -268,6 +271,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "ForceSub needs camera access to take your selfie for face recognition check-in.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -299,6 +303,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "ForceSub needs camera access to take your selfie for face recognition check-in.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -370,6 +375,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = BAEDE6FD2F40D5D10011DCA7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseFirestore;
+		};
+		BAEDE7052F40D5D10011DCA7 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BAEDE6FD2F40D5D10011DCA7 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
