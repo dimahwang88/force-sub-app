@@ -5,6 +5,8 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var showSignUp = false
+    @State private var showResetAlert = false
+    @State private var resetSent = false
 
     var body: some View {
         NavigationStack {
@@ -66,6 +68,19 @@ struct LoginView: View {
                 .disabled(email.isEmpty || password.isEmpty || authViewModel.isLoading)
                 .padding(.horizontal)
 
+                // Forgot password
+                Button("Forgot Password?") {
+                    showResetAlert = true
+                }
+                .font(.footnote)
+
+                if resetSent {
+                    Text("Password reset email sent. Check your inbox.")
+                        .font(.footnote)
+                        .foregroundStyle(.green)
+                        .padding(.horizontal)
+                }
+
                 // Sign Up link
                 Button("Don't have an account? Sign Up") {
                     showSignUp = true
@@ -76,6 +91,24 @@ struct LoginView: View {
             }
             .navigationDestination(isPresented: $showSignUp) {
                 SignUpView()
+            }
+            .alert("Reset Password", isPresented: $showResetAlert) {
+                TextField("Email", text: $email)
+                    .textContentType(.emailAddress)
+                    .keyboardType(.emailAddress)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                Button("Send Reset Link") {
+                    Task {
+                        await authViewModel.sendPasswordReset(email: email)
+                        if authViewModel.errorMessage == nil {
+                            resetSent = true
+                        }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Enter your email to receive a password reset link.")
             }
         }
     }

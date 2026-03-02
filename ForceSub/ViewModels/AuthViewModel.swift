@@ -88,6 +88,17 @@ final class AuthViewModel {
         }
     }
 
+    func sendPasswordReset(email: String) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authService.sendPasswordReset(email: email)
+        } catch {
+            errorMessage = Self.friendlyMessage(for: error)
+        }
+        isLoading = false
+    }
+
     // MARK: - Admin Bootstrap
 
     /// Check if any admin account exists. If not, the current user can claim admin.
