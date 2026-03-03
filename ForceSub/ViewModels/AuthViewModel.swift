@@ -102,8 +102,10 @@ final class AuthViewModel {
     // MARK: - Admin Bootstrap
 
     /// Check if any admin account exists. If not, the current user can claim admin.
+    /// Defaults to false on error so the "Become Admin" button stays visible;
+    /// promoteToAdmin() has its own server-side guard before actually promoting.
     func checkAdminExists() async -> Bool {
-        (try? await authService.hasAnyAdmin()) ?? true
+        (try? await authService.hasAnyAdmin()) ?? false
     }
 
     /// Promote the current user to admin (only works if no admins exist).
