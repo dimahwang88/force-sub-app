@@ -35,6 +35,13 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Metadata: any authenticated user can read (for admin bootstrap check);
+    // any authenticated user can write (needed for first-admin bootstrap when no admin exists yet)
+    match /metadata/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
     // Admin invite codes: anyone authenticated can read (for sign-up validation);
     // only admins can create/delete; sign-up flow can update (mark as used)
     match /adminCodes/{code} {

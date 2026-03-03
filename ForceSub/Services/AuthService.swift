@@ -82,12 +82,12 @@ final class AuthService {
     // MARK: - Admin Bootstrap
 
     /// Returns true if at least one admin user exists in Firestore.
+    /// Uses a dedicated metadata document that any authenticated user can read,
+    /// avoiding permission issues with querying the users collection.
     func hasAnyAdmin() async throws -> Bool {
-        let snapshot = try await db.collection("users")
-            .whereField("isAdmin", isEqualTo: true)
-            .limit(to: 1)
-            .getDocuments()
-        return !snapshot.isEmpty
+        let doc = try await db.collection("metadata").document("adminBootstrap").getDocument()
+        guard let data = doc.data() else { return false }
+        return data["adminExists"] as? Bool ?? false
     }
 
     /// Promote a user to admin. Only succeeds when no admins exist yet (bootstrap).
@@ -99,6 +99,12 @@ final class AuthService {
         try await db.collection("users").document(userId).updateData([
             "isAdmin": true,
             "accountType": AccountType.admin.rawValue
+        ])
+        // Mark that an admin now exists so future bootstrap attempts are blocked
+        try await db.collection("metadata").document("adminBootstrap").setData([
+            "adminExists": true,
+            "firstAdminUserId": userId,
+            "createdAt": FieldValue.serverTimestamp()
         ])
     }
 
