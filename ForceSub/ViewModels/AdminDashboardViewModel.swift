@@ -100,15 +100,41 @@ final class AdminDashboardViewModel {
     func loadDashboard() async {
         isLoading = true
         errorMessage = nil
-        do {
-            async let customersTask = adminService.fetchAllCustomers()
-            async let bookingsTask = adminService.fetchAllBookings()
-            async let codesTask = adminService.fetchAdminCodes()
-            customers = try await customersTask
-            allBookings = try await bookingsTask
-            adminCodes = try await codesTask
-        } catch {
-            errorMessage = "Failed to load dashboard data."
+        var errors: [String] = []
+
+        // Load each data source independently so one failure doesn't block the rest
+        async let customersResult: Result<[AppUser], Error> = {
+            do { return .success(try await adminService.fetchAllCustomers()) }
+            catch { return .failure(error) }
+        }()
+
+        async let bookingsResult: Result<[Booking], Error> = {
+            do { return .success(try await adminService.fetchAllBookings()) }
+            catch { return .failure(error) }
+        }()
+
+        async let codesResult: Result<[AdminCode], Error> = {
+            do { return .success(try await adminService.fetchAdminCodes()) }
+            catch { return .failure(error) }
+        }()
+
+        let (cr, br, ar) = await (customersResult, bookingsResult, codesResult)
+
+        switch cr {
+        case .success(let data): customers = data
+        case .failure(let e): errors.append("Customers: \(e.localizedDescription)")
+        }
+        switch br {
+        case .success(let data): allBookings = data
+        case .failure(let e): errors.append("Bookings: \(e.localizedDescription)")
+        }
+        switch ar {
+        case .success(let data): adminCodes = data
+        case .failure(let e): errors.append("Invite codes: \(e.localizedDescription)")
+        }
+
+        if !errors.isEmpty {
+            errorMessage = errors.joined(separator: "\n")
         }
         isLoading = false
     }
