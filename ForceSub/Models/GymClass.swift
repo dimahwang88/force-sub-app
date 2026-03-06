@@ -12,6 +12,8 @@ struct GymClass: Codable, Identifiable, Hashable {
     var location: String
     var totalSpots: Int
     var bookedCount: Int
+    /// Download URL for the post-training group photo stored in Firebase Storage
+    var groupPhotoURL: String?
 
     var availableSpots: Int {
         max(0, totalSpots - bookedCount)

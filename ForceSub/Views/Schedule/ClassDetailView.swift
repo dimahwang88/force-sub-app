@@ -5,6 +5,7 @@ struct ClassDetailView: View {
     @State private var viewModel: ClassDetailViewModel
     @State private var showCancelConfirmation = false
     @State private var showEditClass = false
+    @State private var showGroupPhotoCapture = false
 
     private var isAdmin: Bool {
         authViewModel.currentUser?.admin ?? false
@@ -22,6 +23,7 @@ struct ClassDetailView: View {
                 details
                 Divider()
                 description
+                groupPhotoSection
                 Spacer(minLength: 24)
                 bookingButton
             }
@@ -43,6 +45,14 @@ struct ClassDetailView: View {
         .sheet(isPresented: $showEditClass) {
             NavigationStack {
                 EditClassView(gymClass: viewModel.gymClass)
+            }
+        }
+        .sheet(isPresented: $showGroupPhotoCapture) {
+            if let classId = viewModel.gymClass.id {
+                GroupPhotoCaptureView(
+                    classId: classId,
+                    groupPhotoURL: $viewModel.gymClass.groupPhotoURL
+                )
             }
         }
         .onChange(of: showEditClass) { _, isPresented in
@@ -104,6 +114,70 @@ struct ClassDetailView: View {
                 .font(.body)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    // MARK: - Group Photo
+
+    @ViewBuilder
+    private var groupPhotoSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+
+            Text("Group Photo")
+                .font(.headline)
+
+            if let urlString = viewModel.gymClass.groupPhotoURL, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    case .failure:
+                        groupPhotoPlaceholder
+                    case .empty:
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 200)
+                    @unknown default:
+                        groupPhotoPlaceholder
+                    }
+                }
+            } else if !isAdmin {
+                Text("No group photo yet.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if isAdmin {
+                Button {
+                    showGroupPhotoCapture = true
+                } label: {
+                    Label(
+                        viewModel.gymClass.groupPhotoURL != nil ? "Update Group Photo" : "Add Group Photo",
+                        systemImage: "camera.fill"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+            }
+        }
+    }
+
+    private var groupPhotoPlaceholder: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 200)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Booking Button
