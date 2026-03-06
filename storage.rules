@@ -10,5 +10,18 @@ service firebase.storage {
                    && request.resource.size < 5 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
     }
+
+    // Class group photos: any authenticated user can read;
+    // only admins can upload/delete.
+    // Path: classPhotos/{classId}.jpg
+    match /classPhotos/{classId}.jpg {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+      allow delete: if request.auth != null
+                    && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
   }
 }
