@@ -36,14 +36,15 @@ final class AuthViewModel {
         isLoading = false
     }
 
-    func signUp(email: String, password: String, displayName: String) async {
+    func signUp(email: String, password: String, displayName: String, adminCode: String? = nil) async {
         isLoading = true
         errorMessage = nil
         do {
             _ = try await authService.signUp(
                 email: email,
                 password: password,
-                displayName: displayName
+                displayName: displayName,
+                adminCode: adminCode
             )
         } catch {
             errorMessage = Self.friendlyMessage(for: error)
@@ -85,6 +86,54 @@ final class AuthViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func sendPasswordReset(email: String) async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authService.sendPasswordReset(email: email)
+        } catch {
+            errorMessage = Self.friendlyMessage(for: error)
+        }
+        isLoading = false
+    }
+
+    // MARK: - Admin Bootstrap
+
+    /// Check if any admin account exists. If not, the current user can claim admin.
+    /// Defaults to false on error so the "Become Admin" button stays visible;
+    /// promoteToAdmin() has its own server-side guard before actually promoting.
+    func checkAdminExists() async -> Bool {
+        (try? await authService.hasAnyAdmin()) ?? false
+    }
+
+    /// Promote the current user to admin (only works if no admins exist).
+    func becomeAdmin() async {
+        guard let userId = currentUserId else { return }
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authService.promoteToAdmin(userId: userId)
+            currentUser = try await authService.fetchUser(userId: userId)
+        } catch {
+            errorMessage = "Failed to become admin: \(error.localizedDescription)"
+        }
+        isLoading = false
+    }
+
+    /// Redeem an admin invite code to promote the current user.
+    func redeemAdminCode(_ code: String) async {
+        guard let userId = currentUserId else { return }
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authService.promoteWithCode(userId: userId, code: code)
+            currentUser = try await authService.fetchUser(userId: userId)
+        } catch {
+            errorMessage = "Invalid or expired admin code."
+        }
+        isLoading = false
     }
 
     private func fetchUserProfile(userId: String) async {

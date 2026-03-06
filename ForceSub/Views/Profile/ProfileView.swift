@@ -4,6 +4,9 @@ struct ProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = ProfileViewModel()
     @State private var showSelfieCaptureSheet = false
+    @State private var noAdminExists = false
+    @State private var adminCode = ""
+    @State private var showAdminCodeField = false
 
     var body: some View {
         Group {
@@ -19,6 +22,7 @@ struct ProfileView: View {
             if let userId = authViewModel.currentUserId {
                 await viewModel.loadProfile(userId: userId)
             }
+            noAdminExists = !(await authViewModel.checkAdminExists())
         }
         .sheet(isPresented: $showSelfieCaptureSheet) {
             SelfieCaptureView()
@@ -39,11 +43,19 @@ struct ProfileView: View {
                         selfieAvatar(url: user.selfieURL)
                             .onTapGesture { showSelfieCaptureSheet = true }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(user.displayName)
-                                .font(.title3.bold())
+                            HStack(spacing: 6) {
+                                Text(user.displayName)
+                                    .font(.title3.bold())
+                                Image(systemName: user.admin ? "shield.checkered" : "person.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(user.admin ? .blue : .secondary)
+                            }
                             Text(user.email)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                            Text(user.admin ? "Admin" : "Customer")
+                                .font(.caption)
+                                .foregroundStyle(user.admin ? .blue : .secondary)
                         }
                     }
                     .padding(.vertical, 4)
@@ -131,6 +143,50 @@ struct ProfileView: View {
                         showSelfieCaptureSheet = true
                     }
                     .font(.subheadline)
+                }
+            }
+
+            // Admin section — only shown for non-admin users
+            if authViewModel.currentUser?.admin != true {
+                Section {
+                    if noAdminExists {
+                        Button {
+                            Task {
+                                await authViewModel.becomeAdmin()
+                                noAdminExists = false
+                            }
+                        } label: {
+                            Label("Become Admin", systemImage: "shield.checkered")
+                        }
+                    }
+
+                    if showAdminCodeField {
+                        TextField("Admin Invite Code", text: $adminCode)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                        Button {
+                            Task {
+                                await authViewModel.redeemAdminCode(adminCode)
+                                adminCode = ""
+                                showAdminCodeField = false
+                            }
+                        } label: {
+                            Label("Submit Code", systemImage: "checkmark.circle.fill")
+                        }
+                        .disabled(adminCode.isEmpty)
+                    } else {
+                        Button {
+                            showAdminCodeField = true
+                        } label: {
+                            Label("I have an admin invite code", systemImage: "shield.checkered")
+                        }
+                    }
+                } footer: {
+                    if noAdminExists {
+                        Text("No admin account exists yet. Tap to make this the admin account.")
+                    } else {
+                        Text("Enter an invite code from an admin to get admin access.")
+                    }
                 }
             }
 
