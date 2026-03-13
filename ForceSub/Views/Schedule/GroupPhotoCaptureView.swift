@@ -39,7 +39,7 @@ struct GroupPhotoCaptureView: View {
             .task {
                 viewModel.groupPhotoURL = groupPhotoURL
             }
-            .sheet(isPresented: $viewModel.showCamera) {
+            .fullScreenCover(isPresented: $viewModel.showCamera) {
                 GroupCameraView(image: $viewModel.selectedImage)
                     .ignoresSafeArea()
             }

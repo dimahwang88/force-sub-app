@@ -42,7 +42,7 @@ struct SelfieCaptureView: View {
                     await viewModel.loadSelfieURL(userId: userId)
                 }
             }
-            .sheet(isPresented: $viewModel.showCamera) {
+            .fullScreenCover(isPresented: $viewModel.showCamera) {
                 CameraView(image: $viewModel.selectedImage)
                     .ignoresSafeArea()
             }
