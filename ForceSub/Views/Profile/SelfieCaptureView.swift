@@ -190,16 +190,20 @@ struct SelfieCaptureView: View {
     }
 
     private func requestCameraAccess() {
-        guard AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) != nil else {
-            viewModel.errorMessage = "Camera is not available on this device."
-            return
-        }
+        print("📷 requestCameraAccess called")
+        print("📷 Bundle camera key: \(Bundle.main.object(forInfoDictionaryKey: "NSCameraUsageDescription") ?? "nil")")
 
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        print("📷 Authorization status: \(status.rawValue) (0=notDetermined, 1=restricted, 2=denied, 3=authorized)")
+
+        switch status {
         case .authorized:
+            print("📷 Already authorized, showing camera")
             viewModel.showCamera = true
         case .notDetermined:
+            print("📷 Not determined, requesting access...")
             AVCaptureDevice.requestAccess(for: .video) { granted in
+                print("📷 Access request result: \(granted)")
                 DispatchQueue.main.async {
                     if granted {
                         viewModel.showCamera = true
@@ -209,6 +213,7 @@ struct SelfieCaptureView: View {
                 }
             }
         case .denied, .restricted:
+            print("📷 Access denied/restricted")
             showCameraPermissionAlert = true
         @unknown default:
             showCameraPermissionAlert = true
@@ -299,28 +304,47 @@ final class CameraManager: NSObject {
 
     func start() async {
         guard session.inputs.isEmpty else { return }
+        print("📷 CameraManager.start() - position: \(position == .front ? "front" : "back")")
 
-        // Configure session on main thread (safe for configuration)
         session.beginConfiguration()
         session.sessionPreset = .photo
 
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
-              let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else {
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
+            print("📷 ❌ No camera device found for position")
+            session.commitConfiguration()
+            return
+        }
+        print("📷 Found device: \(device.localizedName)")
+
+        let input: AVCaptureDeviceInput
+        do {
+            input = try AVCaptureDeviceInput(device: device)
+        } catch {
+            print("📷 ❌ AVCaptureDeviceInput error: \(error)")
+            session.commitConfiguration()
+            return
+        }
+
+        guard session.canAddInput(input) else {
+            print("📷 ❌ Cannot add input to session")
             session.commitConfiguration()
             return
         }
         session.addInput(input)
+        print("📷 Added video input")
 
         if session.canAddOutput(photoOutput) {
             session.addOutput(photoOutput)
+            print("📷 Added photo output")
         }
         session.commitConfiguration()
+        print("📷 Session configured, starting...")
 
-        // Start running must be off the main thread
         let session = self.session
         await Task.detached {
+            print("📷 Starting session on background thread")
             session.startRunning()
+            print("📷 Session running: \(session.isRunning)")
         }.value
     }
 

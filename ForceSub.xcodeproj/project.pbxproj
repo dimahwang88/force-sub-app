@@ -271,7 +271,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ForceSub/Info.plist;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "ForceSub needs camera access to take your selfie for face recognition check-in.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ForceSub needs microphone access for the camera.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ForceSub needs photo library access to select a selfie.";
@@ -306,7 +306,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = ForceSub/Info.plist;
+				INFOPLIST_FILE = Info.plist;
 				INFOPLIST_KEY_NSCameraUsageDescription = "ForceSub needs camera access to take your selfie for face recognition check-in.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ForceSub needs microphone access for the camera.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ForceSub needs photo library access to select a selfie.";
