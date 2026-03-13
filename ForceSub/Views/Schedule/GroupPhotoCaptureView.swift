@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import AVFoundation
 
 struct GroupPhotoCaptureView: View {
     let classId: String
@@ -7,6 +8,7 @@ struct GroupPhotoCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = GroupPhotoViewModel()
     @State private var photosPickerItem: PhotosPickerItem?
+    @State private var showCameraPermissionAlert = false
 
     var body: some View {
         NavigationStack {
@@ -40,6 +42,16 @@ struct GroupPhotoCaptureView: View {
             .sheet(isPresented: $viewModel.showCamera) {
                 GroupCameraView(image: $viewModel.selectedImage)
                     .ignoresSafeArea()
+            }
+            .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please enable camera access in Settings to take a group photo.")
             }
             .onChange(of: photosPickerItem) { _, newItem in
                 guard let newItem else { return }
@@ -126,7 +138,7 @@ struct GroupPhotoCaptureView: View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Button {
-                    viewModel.showCamera = true
+                    requestCameraAccess()
                 } label: {
                     Label("Camera", systemImage: "camera.fill")
                         .frame(maxWidth: .infinity)
@@ -189,6 +201,32 @@ struct GroupPhotoCaptureView: View {
                 .controlSize(.large)
                 .disabled(viewModel.isDeleting)
             }
+        }
+    }
+
+    private func requestCameraAccess() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            viewModel.errorMessage = "Camera is not available on this device."
+            return
+        }
+
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            viewModel.showCamera = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        viewModel.showCamera = true
+                    } else {
+                        showCameraPermissionAlert = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showCameraPermissionAlert = true
+        @unknown default:
+            showCameraPermissionAlert = true
         }
     }
 }
