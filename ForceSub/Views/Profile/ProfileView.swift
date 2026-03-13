@@ -48,14 +48,14 @@ struct ProfileView: View {
                                     .font(.title3.bold())
                                 Image(systemName: user.admin ? "shield.checkered" : "person.fill")
                                     .font(.caption)
-                                    .foregroundStyle(user.admin ? .blue : .secondary)
+                                    .foregroundStyle(user.admin ? Color.appPrimary : .secondary)
                             }
                             Text(user.email)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                             Text(user.admin ? "Admin" : "Customer")
                                 .font(.caption)
-                                .foregroundStyle(user.admin ? .blue : .secondary)
+                                .foregroundStyle(user.admin ? Color.appPrimary : .secondary)
                         }
                     }
                     .padding(.vertical, 4)

@@ -21,5 +21,6 @@ struct MainTabView: View {
                 }
             }
         }
+        .tint(Color.appPrimary)
     }
 }

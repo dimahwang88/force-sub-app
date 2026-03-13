@@ -1,7 +1,9 @@
 import SwiftUI
 
 extension Color {
-    static let appPrimary = Color.blue
+    // Brand colors matching the Force Submission logo
+    static let appPrimary = Color(red: 0.48, green: 0.33, blue: 0.65) // #7B54A6
+    static let appSecondary = Color(red: 0.58, green: 0.44, blue: 0.72) // #9470B8
     static let appBackground = Color(.systemGroupedBackground)
 
     static func levelColor(for level: String) -> Color {
@@ -9,7 +11,7 @@ extension Color {
         case "beginner", "all levels": return .green
         case "intermediate": return .orange
         case "advanced", "coloured belts": return .red
-        default: return .blue
+        default: return .appPrimary
         }
     }
 
@@ -38,9 +40,9 @@ extension Color {
     static func heatmapColor(count: Int) -> Color {
         switch count {
         case 0: return Color(.systemGray5)
-        case 1: return .green.opacity(0.3)
-        case 2: return .green.opacity(0.6)
-        default: return .green.opacity(0.9)
+        case 1: return Color.appPrimary.opacity(0.3)
+        case 2: return Color.appPrimary.opacity(0.6)
+        default: return Color.appPrimary.opacity(0.9)
         }
     }
 }

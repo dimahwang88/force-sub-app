@@ -28,7 +28,7 @@ struct AdminDashboardView: View {
         List {
             // Summary stats
             Section("Overview") {
-                StatRow(icon: "person.2.fill", label: "Total Customers", value: "\(viewModel.totalCustomers)", color: .blue)
+                StatRow(icon: "person.2.fill", label: "Total Customers", value: "\(viewModel.totalCustomers)", color: .appPrimary)
                 StatRow(icon: "checkmark.circle.fill", label: "Classes Attended", value: "\(viewModel.totalClassesAttended)", color: .green)
                 StatRow(icon: "calendar.badge.clock", label: "Upcoming Bookings", value: "\(viewModel.upcomingBookingsCount)", color: .orange)
             }
@@ -237,7 +237,7 @@ private struct DailyAttendanceChartView: View {
                         VStack(spacing: 0) {
                             Spacer(minLength: 0)
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(item.count > 0 ? Color.blue : Color(uiColor: .systemGray5))
+                                .fill(item.count > 0 ? Color.appPrimary : Color(uiColor: .systemGray5))
                                 .frame(height: max(2, CGFloat(item.count) / CGFloat(maxCount) * (geo.size.height - 20)))
                         }
                     }

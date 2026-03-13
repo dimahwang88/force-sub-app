@@ -24,6 +24,7 @@ struct SignUpView: View {
 
             Text("Create Account")
                 .font(.largeTitle.bold())
+                .foregroundStyle(Color.appPrimary)
 
             VStack(spacing: 16) {
                 TextField("Display Name", text: $displayName)
