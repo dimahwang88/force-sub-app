@@ -226,6 +226,8 @@ struct CameraView: UIViewControllerRepresentable {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.cameraDevice = .front
+        picker.cameraCaptureMode = .photo
+        picker.mediaTypes = ["public.image"]
         picker.delegate = context.coordinator
         return picker
     }

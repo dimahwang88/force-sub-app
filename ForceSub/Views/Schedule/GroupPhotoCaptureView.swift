@@ -241,6 +241,8 @@ struct GroupCameraView: UIViewControllerRepresentable {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
         picker.cameraDevice = .rear
+        picker.cameraCaptureMode = .photo
+        picker.mediaTypes = ["public.image"]
         picker.delegate = context.coordinator
         return picker
     }
