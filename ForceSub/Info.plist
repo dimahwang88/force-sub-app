@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCameraUsageDescription</key>
+	<string>ForceSub needs camera access to take your selfie for face recognition check-in.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>ForceSub needs microphone access for the camera.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ForceSub needs photo library access to select a selfie.</string>
+</dict>
+</plist>

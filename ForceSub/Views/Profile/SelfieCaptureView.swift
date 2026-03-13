@@ -252,7 +252,7 @@ struct CameraView: View {
                 .padding(.bottom, 30)
             }
         }
-        .onAppear { cameraManager.start() }
+        .task { await cameraManager.start() }
         .onDisappear { cameraManager.stop() }
     }
 }
@@ -284,20 +284,23 @@ struct CameraPreviewView: UIViewRepresentable {
 
 // MARK: - Camera Manager (AVCaptureSession)
 
-@Observable
-final class CameraManager: NSObject, @preconcurrency AVCapturePhotoCaptureDelegate {
+@MainActor @Observable
+final class CameraManager: NSObject {
     let session = AVCaptureSession()
     private let photoOutput = AVCapturePhotoOutput()
     private let position: AVCaptureDevice.Position
-    private var completion: ((UIImage?) -> Void)?
+    private let delegate: PhotoCaptureDelegate
 
     init(position: AVCaptureDevice.Position) {
         self.position = position
+        self.delegate = PhotoCaptureDelegate(position: position)
         super.init()
     }
 
-    func start() {
+    func start() async {
         guard session.inputs.isEmpty else { return }
+
+        // Configure session on main thread (safe for configuration)
         session.beginConfiguration()
         session.sessionPreset = .photo
 
@@ -314,47 +317,58 @@ final class CameraManager: NSObject, @preconcurrency AVCapturePhotoCaptureDelega
         }
         session.commitConfiguration()
 
-        DispatchQueue.global(qos: .userInitiated).async { [session] in
+        // Start running must be off the main thread
+        let session = self.session
+        await Task.detached {
             session.startRunning()
-        }
+        }.value
     }
 
     func stop() {
-        DispatchQueue.global(qos: .userInitiated).async { [session] in
+        let session = self.session
+        Task.detached {
             session.stopRunning()
         }
     }
 
-    func capturePhoto(completion: @escaping (UIImage?) -> Void) {
-        self.completion = completion
+    func capturePhoto(completion: @escaping @MainActor (UIImage?) -> Void) {
+        delegate.completion = completion
         let settings = AVCapturePhotoSettings()
-        photoOutput.capturePhoto(with: settings, delegate: self)
+        photoOutput.capturePhoto(with: settings, delegate: delegate)
+    }
+}
+
+// Separate nonisolated delegate to avoid MainActor issues with AVCapturePhotoCaptureDelegate callbacks
+nonisolated final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
+    let position: AVCaptureDevice.Position
+    var completion: (@MainActor (UIImage?) -> Void)?
+
+    init(position: AVCaptureDevice.Position) {
+        self.position = position
+        super.init()
     }
 
-    nonisolated func photoOutput(
+    func photoOutput(
         _ output: AVCapturePhotoOutput,
         didFinishProcessingPhoto photo: AVCapturePhoto,
         error: Error?
     ) {
+        let completion = self.completion
+        self.completion = nil
+
         guard let data = photo.fileDataRepresentation(),
               let image = UIImage(data: data) else {
-            DispatchQueue.main.async { [weak self] in
-                self?.completion?(nil)
-                self?.completion = nil
-            }
+            DispatchQueue.main.async { completion?(nil) }
             return
         }
 
-        let mirrored: UIImage
-        if position == .front {
-            mirrored = UIImage(cgImage: image.cgImage!, scale: image.scale, orientation: .leftMirrored)
+        let result: UIImage
+        if position == .front, let cgImage = image.cgImage {
+            result = UIImage(cgImage: cgImage, scale: image.scale, orientation: .leftMirrored)
         } else {
-            mirrored = image
+            result = image
         }
 
-        DispatchQueue.main.async { [weak self] in
-            self?.completion?(mirrored)
-            self?.completion = nil
-        }
+        DispatchQueue.main.async { completion?(result) }
     }
 }

@@ -267,7 +267,7 @@ struct GroupCameraView: View {
                 .padding(.bottom, 30)
             }
         }
-        .onAppear { cameraManager.start() }
+        .task { await cameraManager.start() }
         .onDisappear { cameraManager.stop() }
     }
 }
