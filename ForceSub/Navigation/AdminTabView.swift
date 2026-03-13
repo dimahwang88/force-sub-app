@@ -21,6 +21,5 @@ struct AdminTabView: View {
                 }
             }
         }
-        .tint(Color.appPrimary)
     }
 }

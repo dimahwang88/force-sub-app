@@ -15,12 +15,11 @@ struct LoginView: View {
 
                 // Header
                 VStack(spacing: 8) {
-                    Text("Force Submission")
+                    Text("Force Sub")
                         .font(.largeTitle.bold())
-                        .foregroundStyle(Color.appPrimary)
-                    Text("Brazilian Jiu Jitsu & MMA Academy")
+                    Text("Jiu Jitsu Academy")
                         .font(.subheadline)
-                        .foregroundStyle(Color.appSecondary)
+                        .foregroundStyle(.secondary)
                 }
 
                 // Form

@@ -24,7 +24,6 @@ struct ForceSubApp: App {
         WindowGroup {
             ContentView()
                 .environment(authViewModel)
-                .tint(Color.appPrimary)
         }
     }
 }
