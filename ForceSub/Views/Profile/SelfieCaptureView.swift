@@ -190,7 +190,7 @@ struct SelfieCaptureView: View {
     }
 
     private func requestCameraAccess() {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+        guard AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front) != nil else {
             viewModel.errorMessage = "Camera is not available on this device."
             return
         }
@@ -216,47 +216,145 @@ struct SelfieCaptureView: View {
     }
 }
 
-// MARK: - Camera UIViewControllerRepresentable
+// MARK: - AVCaptureSession Camera View
 
-struct CameraView: UIViewControllerRepresentable {
+struct CameraView: View {
     @Binding var image: UIImage?
     @Environment(\.dismiss) private var dismiss
+    @State private var cameraManager = CameraManager(position: .front)
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.cameraDevice = .front
-        picker.cameraCaptureMode = .photo
-        picker.mediaTypes = ["public.image"]
-        picker.delegate = context.coordinator
-        return picker
-    }
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+            CameraPreviewView(session: cameraManager.session)
+                .ignoresSafeArea()
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraView
-
-        init(_ parent: CameraView) {
-            self.parent = parent
-        }
-
-        func imagePickerController(
-            _ picker: UIImagePickerController,
-            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-        ) {
-            if let uiImage = info[.originalImage] as? UIImage {
-                parent.image = uiImage
+            VStack {
+                HStack {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding()
+                    Spacer()
+                }
+                Spacer()
+                Button {
+                    cameraManager.capturePhoto { capturedImage in
+                        image = capturedImage
+                        dismiss()
+                    }
+                } label: {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 72, height: 72)
+                        .overlay(Circle().stroke(Color.gray, lineWidth: 3).frame(width: 62, height: 62))
+                }
+                .padding(.bottom, 30)
             }
-            parent.dismiss()
+        }
+        .onAppear { cameraManager.start() }
+        .onDisappear { cameraManager.stop() }
+    }
+}
+
+// MARK: - Camera Preview (UIViewRepresentable)
+
+struct CameraPreviewView: UIViewRepresentable {
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
+        previewLayer.videoGravity = .resizeAspectFill
+        view.layer.addSublayer(previewLayer)
+        context.coordinator.previewLayer = previewLayer
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        context.coordinator.previewLayer?.frame = uiView.bounds
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    final class Coordinator {
+        var previewLayer: AVCaptureVideoPreviewLayer?
+    }
+}
+
+// MARK: - Camera Manager (AVCaptureSession)
+
+@Observable
+final class CameraManager: NSObject, @preconcurrency AVCapturePhotoCaptureDelegate {
+    let session = AVCaptureSession()
+    private let photoOutput = AVCapturePhotoOutput()
+    private let position: AVCaptureDevice.Position
+    private var completion: ((UIImage?) -> Void)?
+
+    init(position: AVCaptureDevice.Position) {
+        self.position = position
+        super.init()
+    }
+
+    func start() {
+        guard session.inputs.isEmpty else { return }
+        session.beginConfiguration()
+        session.sessionPreset = .photo
+
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position),
+              let input = try? AVCaptureDeviceInput(device: device),
+              session.canAddInput(input) else {
+            session.commitConfiguration()
+            return
+        }
+        session.addInput(input)
+
+        if session.canAddOutput(photoOutput) {
+            session.addOutput(photoOutput)
+        }
+        session.commitConfiguration()
+
+        DispatchQueue.global(qos: .userInitiated).async { [session] in
+            session.startRunning()
+        }
+    }
+
+    func stop() {
+        DispatchQueue.global(qos: .userInitiated).async { [session] in
+            session.stopRunning()
+        }
+    }
+
+    func capturePhoto(completion: @escaping (UIImage?) -> Void) {
+        self.completion = completion
+        let settings = AVCapturePhotoSettings()
+        photoOutput.capturePhoto(with: settings, delegate: self)
+    }
+
+    nonisolated func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishProcessingPhoto photo: AVCapturePhoto,
+        error: Error?
+    ) {
+        guard let data = photo.fileDataRepresentation(),
+              let image = UIImage(data: data) else {
+            DispatchQueue.main.async { [weak self] in
+                self?.completion?(nil)
+                self?.completion = nil
+            }
+            return
         }
 
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
+        let mirrored: UIImage
+        if position == .front {
+            mirrored = UIImage(cgImage: image.cgImage!, scale: image.scale, orientation: .leftMirrored)
+        } else {
+            mirrored = image
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.completion?(mirrored)
+            self?.completion = nil
         }
     }
 }

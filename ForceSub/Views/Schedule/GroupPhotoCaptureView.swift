@@ -205,7 +205,7 @@ struct GroupPhotoCaptureView: View {
     }
 
     private func requestCameraAccess() {
-        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+        guard AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) != nil else {
             viewModel.errorMessage = "Camera is not available on this device."
             return
         }
@@ -231,47 +231,43 @@ struct GroupPhotoCaptureView: View {
     }
 }
 
-// MARK: - Camera (rear-facing for group photos)
+// MARK: - Group Camera (rear-facing)
 
-struct GroupCameraView: UIViewControllerRepresentable {
+struct GroupCameraView: View {
     @Binding var image: UIImage?
     @Environment(\.dismiss) private var dismiss
+    @State private var cameraManager = CameraManager(position: .back)
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.cameraDevice = .rear
-        picker.cameraCaptureMode = .photo
-        picker.mediaTypes = ["public.image"]
-        picker.delegate = context.coordinator
-        return picker
-    }
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+            CameraPreviewView(session: cameraManager.session)
+                .ignoresSafeArea()
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: GroupCameraView
-
-        init(_ parent: GroupCameraView) {
-            self.parent = parent
-        }
-
-        func imagePickerController(
-            _ picker: UIImagePickerController,
-            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-        ) {
-            if let uiImage = info[.originalImage] as? UIImage {
-                parent.image = uiImage
+            VStack {
+                HStack {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding()
+                    Spacer()
+                }
+                Spacer()
+                Button {
+                    cameraManager.capturePhoto { capturedImage in
+                        image = capturedImage
+                        dismiss()
+                    }
+                } label: {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 72, height: 72)
+                        .overlay(Circle().stroke(Color.gray, lineWidth: 3).frame(width: 62, height: 62))
+                }
+                .padding(.bottom, 30)
             }
-            parent.dismiss()
         }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
-        }
+        .onAppear { cameraManager.start() }
+        .onDisappear { cameraManager.stop() }
     }
 }
