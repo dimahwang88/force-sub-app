@@ -33,7 +33,15 @@ final class GroupPhotoService {
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
 
-        _ = try await storageRef.putData(imageData, metadata: metadata)
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            storageRef.putData(imageData, metadata: metadata) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
 
         let downloadURL = try await storageRef.downloadURL()
         let urlString = downloadURL.absoluteString

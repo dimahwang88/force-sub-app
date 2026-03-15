@@ -36,8 +36,17 @@ final class SelfieService {
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
 
-        // Upload the image data
-        _ = try await storageRef.putData(imageData, metadata: metadata)
+        // Upload the image data using completion-handler API wrapped in a continuation
+        // to ensure the upload fully completes before proceeding.
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            storageRef.putData(imageData, metadata: metadata) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
 
         // Get the download URL
         let downloadURL = try await storageRef.downloadURL()
