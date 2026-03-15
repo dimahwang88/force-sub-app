@@ -38,9 +38,18 @@ final class ScheduleViewModel {
         isExtending = true
         extendResult = nil
         do {
+            // Clean up any existing duplicates first
+            let removed = try await classService.removeDuplicates()
+
             let count = try await classService.extendSchedule()
             if count > 0 {
-                extendResult = "Created \(count) classes for this week and next."
+                var message = "Created \(count) classes for this week and next."
+                if removed > 0 {
+                    message += " Removed \(removed) duplicates."
+                }
+                extendResult = message
+            } else if removed > 0 {
+                extendResult = "Removed \(removed) duplicate classes."
             } else {
                 extendResult = "No new classes to create — schedule may already be current."
             }

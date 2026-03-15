@@ -99,6 +99,45 @@ final class ClassService {
         try await db.collection(collectionName).document(id).delete()
     }
 
+    /// Removes duplicate classes that share the same name and dateTime,
+    /// keeping only one copy of each. Returns the number of duplicates removed.
+    func removeDuplicates() async throws -> Int {
+        let snapshot = try await db.collection(collectionName)
+            .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: Date()))
+            .order(by: "dateTime")
+            .getDocuments()
+
+        // Group by name + dateTime to find duplicates
+        var seen: [String: String] = [:] // "name|seconds" -> first doc ID
+        var toDelete: [String] = []
+
+        for doc in snapshot.documents {
+            let data = doc.data()
+            guard let name = data["name"] as? String,
+                  let ts = data["dateTime"] as? Timestamp else { continue }
+            let key = "\(name)|\(ts.seconds)"
+            if seen[key] != nil {
+                toDelete.append(doc.documentID)
+            } else {
+                seen[key] = doc.documentID
+            }
+        }
+
+        if toDelete.isEmpty { return 0 }
+
+        // Delete in batches of 500
+        for chunk in stride(from: 0, to: toDelete.count, by: 500) {
+            let batch = db.batch()
+            let end = min(chunk + 500, toDelete.count)
+            for i in chunk..<end {
+                batch.deleteDocument(db.collection(collectionName).document(toDelete[i]))
+            }
+            try await batch.commit()
+        }
+
+        return toDelete.count
+    }
+
     /// Fetches the most recent week that has classes and duplicates them
     /// into the current week and the next week, resetting bookedCount to 0.
     /// Returns the number of classes created.
@@ -146,6 +185,17 @@ final class ClassService {
         for targetStart in targetWeekStarts {
             // Skip if target week is the same as source week
             if calendar.isDate(targetStart, equalTo: sourceWeekStart, toGranularity: .weekOfYear) {
+                continue
+            }
+
+            // Skip if target week already has classes (prevents duplicates)
+            let targetEnd = calendar.date(byAdding: .day, value: 7, to: targetStart)!
+            let existingSnapshot = try await db.collection(collectionName)
+                .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: targetStart))
+                .whereField("dateTime", isLessThan: Timestamp(date: targetEnd))
+                .limit(to: 1)
+                .getDocuments()
+            if !existingSnapshot.documents.isEmpty {
                 continue
             }
 
