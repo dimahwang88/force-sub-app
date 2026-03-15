@@ -99,38 +99,27 @@ final class ClassService {
         try await db.collection(collectionName).document(id).delete()
     }
 
-    /// Removes duplicate classes that share the same name and dateTime,
-    /// keeping only one copy of each. Returns the number of duplicates removed.
-    func removeDuplicates() async throws -> Int {
+    /// Deletes all classes with `bookedCount == 0` in the given date range.
+    /// Classes with bookings are preserved. Returns number deleted.
+    private func clearUnbookedClasses(from start: Date, to end: Date) async throws -> Int {
         let snapshot = try await db.collection(collectionName)
-            .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: Date()))
-            .order(by: "dateTime")
+            .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: start))
+            .whereField("dateTime", isLessThan: Timestamp(date: end))
             .getDocuments()
 
-        // Group by name + dateTime to find duplicates
-        var seen: [String: String] = [:] // "name|seconds" -> first doc ID
-        var toDelete: [String] = []
-
-        for doc in snapshot.documents {
+        let toDelete = snapshot.documents.filter { doc in
             let data = doc.data()
-            guard let name = data["name"] as? String,
-                  let ts = data["dateTime"] as? Timestamp else { continue }
-            let key = "\(name)|\(ts.seconds)"
-            if seen[key] != nil {
-                toDelete.append(doc.documentID)
-            } else {
-                seen[key] = doc.documentID
-            }
+            let booked = data["bookedCount"] as? Int ?? 0
+            return booked == 0
         }
 
         if toDelete.isEmpty { return 0 }
 
-        // Delete in batches of 500
         for chunk in stride(from: 0, to: toDelete.count, by: 500) {
             let batch = db.batch()
             let end = min(chunk + 500, toDelete.count)
             for i in chunk..<end {
-                batch.deleteDocument(db.collection(collectionName).document(toDelete[i]))
+                batch.deleteDocument(toDelete[i].reference)
             }
             try await batch.commit()
         }
@@ -140,6 +129,7 @@ final class ClassService {
 
     /// Fetches the most recent week that has classes and duplicates them
     /// into the current week and the next week, resetting bookedCount to 0.
+    /// Clears any unbooked classes in target weeks first to prevent duplicates.
     /// Returns the number of classes created.
     func extendSchedule() async throws -> Int {
         // Find the most recent class to determine the source week
@@ -153,7 +143,7 @@ final class ClassService {
             return 0
         }
 
-        // Get the full week of the most recent class (Mon–Sun)
+        // Get the full week of the most recent class
         let calendar = Calendar.current
         let sourceWeekStart = calendar.dateInterval(of: .weekOfYear, for: mostRecent.dateTime)!.start
         let sourceWeekEnd = calendar.date(byAdding: .day, value: 7, to: sourceWeekStart)!
@@ -163,11 +153,19 @@ final class ClassService {
             .whereField("dateTime", isLessThan: Timestamp(date: sourceWeekEnd))
             .getDocuments()
 
-        let sourceClasses = weekSnapshot.documents.compactMap { doc in
+        let allSourceClasses = weekSnapshot.documents.compactMap { doc in
             try? doc.data(as: GymClass.self)
         }
 
-        if sourceClasses.isEmpty { return 0 }
+        if allSourceClasses.isEmpty { return 0 }
+
+        // Deduplicate source classes by name + weekday + hour + minute
+        var seen = Set<String>()
+        let sourceClasses = allSourceClasses.filter { cls in
+            let comps = calendar.dateComponents([.weekday, .hour, .minute], from: cls.dateTime)
+            let key = "\(cls.name)|\(comps.weekday!)|\(comps.hour!)|\(comps.minute!)"
+            return seen.insert(key).inserted
+        }
 
         // Calculate current week start
         let today = Date()
@@ -180,7 +178,6 @@ final class ClassService {
         ]
 
         var createdCount = 0
-        let batch = db.batch()
 
         for targetStart in targetWeekStarts {
             // Skip if target week is the same as source week
@@ -188,18 +185,15 @@ final class ClassService {
                 continue
             }
 
-            // Skip if target week already has classes (prevents duplicates)
+            // Clear unbooked classes in target week to remove duplicates
             let targetEnd = calendar.date(byAdding: .day, value: 7, to: targetStart)!
-            let existingSnapshot = try await db.collection(collectionName)
-                .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: targetStart))
-                .whereField("dateTime", isLessThan: Timestamp(date: targetEnd))
-                .limit(to: 1)
-                .getDocuments()
-            if !existingSnapshot.documents.isEmpty {
-                continue
+            let deleted = try await clearUnbookedClasses(from: targetStart, to: targetEnd)
+            if deleted > 0 {
+                print("📅 Cleared \(deleted) unbooked classes from target week")
             }
 
             let dayOffset = calendar.dateComponents([.day], from: sourceWeekStart, to: targetStart).day!
+            let batch = db.batch()
 
             for source in sourceClasses {
                 let newDateTime = calendar.date(byAdding: .day, value: dayOffset, to: source.dateTime)!
@@ -223,10 +217,10 @@ final class ClassService {
                 try batch.setData(from: newClass, forDocument: ref)
                 createdCount += 1
             }
-        }
 
-        if createdCount > 0 {
-            try await batch.commit()
+            if createdCount > 0 {
+                try await batch.commit()
+            }
         }
 
         return createdCount
