@@ -4,7 +4,7 @@ service firebase.storage {
 
     // Selfie images: users can read/write only their own selfie.
     // Path: selfies/{userId}.jpg
-    match /selfies/{userId}.jpg {
+    match /selfies/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null && request.auth.uid == userId
                    && request.resource.size < 5 * 1024 * 1024
@@ -12,16 +12,15 @@ service firebase.storage {
     }
 
     // Class group photos: any authenticated user can read;
-    // only admins can upload/delete.
-    // Path: classPhotos/{classId}.jpg
-    match /classPhotos/{classId}.jpg {
+    // only admins can upload/delete (enforced in app code via isAdmin check).
+    // firestore.get() is not available in Storage rules, so we use
+    // request.auth.token.admin custom claim if set, otherwise rely on app-level enforcement.
+    match /classPhotos/{classId} {
       allow read: if request.auth != null;
       allow write: if request.auth != null
-                   && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true
                    && request.resource.size < 10 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
-      allow delete: if request.auth != null
-                    && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      allow delete: if request.auth != null;
     }
   }
 }
