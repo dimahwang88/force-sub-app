@@ -99,21 +99,65 @@ final class ClassService {
         try await db.collection(collectionName).document(id).delete()
     }
 
-    /// Deletes all classes with `bookedCount == 0` in the given date range.
-    /// Classes with bookings are preserved. Returns number deleted.
-    private func clearUnbookedClasses(from start: Date, to end: Date) async throws -> Int {
-        let snapshot = try await db.collection(collectionName)
-            .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: start))
-            .whereField("dateTime", isLessThan: Timestamp(date: end))
+    /// Fetches the most recent week that has classes and rebuilds the schedule
+    /// for the current and next week. Deletes all future unbooked classes first
+    /// to ensure a clean slate (no duplicates). Returns the number of classes created.
+    func extendSchedule() async throws -> Int {
+        let calendar = Calendar.current
+        let now = Date()
+
+        // Step 1: Fetch ALL classes to build a weekly template
+        let allSnapshot = try await db.collection(collectionName)
+            .order(by: "dateTime", descending: true)
+            .limit(to: 100)
             .getDocuments()
 
-        let toDelete = snapshot.documents.filter { doc in
-            let data = doc.data()
-            let booked = data["bookedCount"] as? Int ?? 0
-            return booked == 0
+        print("📅 extendSchedule: fetched \(allSnapshot.documents.count) total classes")
+
+        let allClasses = allSnapshot.documents.compactMap { doc in
+            try? doc.data(as: GymClass.self)
         }
 
-        if toDelete.isEmpty { return 0 }
+        if allClasses.isEmpty { return 0 }
+
+        // Build a template: unique classes by name + weekday + hour + minute
+        var seen = Set<String>()
+        var template: [(name: String, instructor: String, weekday: Int, hour: Int, minute: Int,
+                         durationMinutes: Int, level: ClassLevel, description: String,
+                         location: String, totalSpots: Int)] = []
+
+        for cls in allClasses {
+            let comps = calendar.dateComponents([.weekday, .hour, .minute], from: cls.dateTime)
+            let key = "\(cls.name)|\(comps.weekday!)|\(comps.hour!)|\(comps.minute!)"
+            if seen.insert(key).inserted {
+                template.append((
+                    name: cls.name, instructor: cls.instructor,
+                    weekday: comps.weekday!, hour: comps.hour!, minute: comps.minute!,
+                    durationMinutes: cls.durationMinutes, level: cls.level,
+                    description: cls.description, location: cls.location,
+                    totalSpots: cls.totalSpots
+                ))
+            }
+        }
+
+        print("📅 Template has \(template.count) unique class slots")
+
+        // Step 2: Delete ALL future unbooked classes
+        let futureSnapshot = try await db.collection(collectionName)
+            .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: now))
+            .getDocuments()
+
+        print("📅 Found \(futureSnapshot.documents.count) future documents to check")
+
+        var deletedCount = 0
+        let toDelete = futureSnapshot.documents.filter { doc in
+            let data = doc.data()
+            // Keep classes that have bookings
+            if let booked = data["bookedCount"] as? NSNumber, booked.intValue > 0 {
+                return false
+            }
+            return true
+        }
 
         for chunk in stride(from: 0, to: toDelete.count, by: 500) {
             let batch = db.batch()
@@ -122,91 +166,44 @@ final class ClassService {
                 batch.deleteDocument(toDelete[i].reference)
             }
             try await batch.commit()
+            deletedCount += (end - chunk)
         }
 
-        return toDelete.count
-    }
+        print("📅 Deleted \(deletedCount) future unbooked classes")
 
-    /// Fetches the most recent week that has classes and duplicates them
-    /// into the current week and the next week, resetting bookedCount to 0.
-    /// Clears any unbooked classes in target weeks first to prevent duplicates.
-    /// Returns the number of classes created.
-    func extendSchedule() async throws -> Int {
-        // Find the most recent class to determine the source week
-        let recentSnapshot = try await db.collection(collectionName)
-            .order(by: "dateTime", descending: true)
-            .limit(to: 1)
-            .getDocuments()
-
-        guard let mostRecentDoc = recentSnapshot.documents.first,
-              let mostRecent = try? mostRecentDoc.data(as: GymClass.self) else {
-            return 0
-        }
-
-        // Get the full week of the most recent class
-        let calendar = Calendar.current
-        let sourceWeekStart = calendar.dateInterval(of: .weekOfYear, for: mostRecent.dateTime)!.start
-        let sourceWeekEnd = calendar.date(byAdding: .day, value: 7, to: sourceWeekStart)!
-
-        let weekSnapshot = try await db.collection(collectionName)
-            .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: sourceWeekStart))
-            .whereField("dateTime", isLessThan: Timestamp(date: sourceWeekEnd))
-            .getDocuments()
-
-        let allSourceClasses = weekSnapshot.documents.compactMap { doc in
-            try? doc.data(as: GymClass.self)
-        }
-
-        if allSourceClasses.isEmpty { return 0 }
-
-        // Deduplicate source classes by name + weekday + hour + minute
-        // This is our "template" — one copy of each unique class slot
-        var seen = Set<String>()
-        let template = allSourceClasses.filter { cls in
-            let comps = calendar.dateComponents([.weekday, .hour, .minute], from: cls.dateTime)
-            let key = "\(cls.name)|\(comps.weekday!)|\(comps.hour!)|\(comps.minute!)"
-            return seen.insert(key).inserted
-        }
-
-        let today = Date()
-        let currentWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)!.start
-
-        // Target weeks: current week + next week (including source week to clean duplicates)
-        let targetWeekStarts = [
-            currentWeekStart,
-            calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeekStart)!
-        ]
-
+        // Step 3: Generate fresh classes for current week + next week
+        let todayStart = calendar.startOfDay(for: now)
         var createdCount = 0
 
-        for targetStart in targetWeekStarts {
-            // Clear all unbooked classes in this week first
-            let targetEnd = calendar.date(byAdding: .day, value: 7, to: targetStart)!
-            let deleted = try await clearUnbookedClasses(from: targetStart, to: targetEnd)
-            if deleted > 0 {
-                print("📅 Cleared \(deleted) unbooked classes from week starting \(targetStart)")
-            }
+        // Generate for the next 14 days
+        for dayOffset in 0..<14 {
+            guard let targetDay = calendar.date(byAdding: .day, value: dayOffset, to: todayStart) else { continue }
+            let targetWeekday = calendar.component(.weekday, from: targetDay)
 
-            // Calculate day offset from source week to target week
-            let dayOffset = calendar.dateComponents([.day], from: sourceWeekStart, to: targetStart).day!
             let batch = db.batch()
             var batchCount = 0
 
-            for source in template {
-                let newDateTime = calendar.date(byAdding: .day, value: dayOffset, to: source.dateTime)!
+            for slot in template {
+                guard slot.weekday == targetWeekday else { continue }
 
-                // Skip classes in the past
-                if newDateTime < today { continue }
+                var comps = calendar.dateComponents([.year, .month, .day], from: targetDay)
+                comps.hour = slot.hour
+                comps.minute = slot.minute
+                comps.second = 0
+                guard let classDateTime = calendar.date(from: comps) else { continue }
+
+                // Skip if in the past
+                if classDateTime < now { continue }
 
                 let newClass = GymClass(
-                    name: source.name,
-                    instructor: source.instructor,
-                    dateTime: newDateTime,
-                    durationMinutes: source.durationMinutes,
-                    level: source.level,
-                    description: source.description,
-                    location: source.location,
-                    totalSpots: source.totalSpots,
+                    name: slot.name,
+                    instructor: slot.instructor,
+                    dateTime: classDateTime,
+                    durationMinutes: slot.durationMinutes,
+                    level: slot.level,
+                    description: slot.description,
+                    location: slot.location,
+                    totalSpots: slot.totalSpots,
                     bookedCount: 0
                 )
 
@@ -221,6 +218,7 @@ final class ClassService {
             }
         }
 
+        print("📅 Created \(createdCount) new classes")
         return createdCount
     }
 }
