@@ -33,14 +33,32 @@ final class ClassService {
             }
         }
 
-        return snapshot.documents.compactMap { doc in
+        var decoded: [GymClass] = []
+        var decodeErrors: [String] = []
+
+        for doc in snapshot.documents {
             do {
-                return try doc.data(as: GymClass.self)
+                let gymClass = try doc.data(as: GymClass.self)
+                decoded.append(gymClass)
             } catch {
-                print("⚠️ Failed to decode class \(doc.documentID): \(error)")
-                return nil
+                let data = doc.data()
+                let fields = data.map { "\($0.key): \(type(of: $0.value))=\($0.value)" }.joined(separator: ", ")
+                print("⚠️ Failed to decode class \(doc.documentID): \(error)\n   Fields: \(fields)")
+                decodeErrors.append("\(doc.documentID): \(error.localizedDescription)")
             }
         }
+
+        // If we found documents but couldn't decode any, throw so the UI shows an error
+        if !snapshot.documents.isEmpty && decoded.isEmpty {
+            let summary = decodeErrors.prefix(3).joined(separator: "\n")
+            throw NSError(
+                domain: "ClassService",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Found \(snapshot.documents.count) classes but failed to decode them.\n\(summary)"]
+            )
+        }
+
+        return decoded
     }
 
     func fetchClass(id: String) async throws -> GymClass? {

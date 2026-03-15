@@ -22,7 +22,7 @@ final class ScheduleViewModel {
         do {
             classesForSelectedDay = try await classService.fetchClasses(for: date)
         } catch {
-            errorMessage = "Failed to load classes."
+            errorMessage = error.localizedDescription
             classesForSelectedDay = []
         }
         isLoading = false
