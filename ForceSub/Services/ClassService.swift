@@ -160,18 +160,18 @@ final class ClassService {
         if allSourceClasses.isEmpty { return 0 }
 
         // Deduplicate source classes by name + weekday + hour + minute
+        // This is our "template" — one copy of each unique class slot
         var seen = Set<String>()
-        let sourceClasses = allSourceClasses.filter { cls in
+        let template = allSourceClasses.filter { cls in
             let comps = calendar.dateComponents([.weekday, .hour, .minute], from: cls.dateTime)
             let key = "\(cls.name)|\(comps.weekday!)|\(comps.hour!)|\(comps.minute!)"
             return seen.insert(key).inserted
         }
 
-        // Calculate current week start
         let today = Date()
         let currentWeekStart = calendar.dateInterval(of: .weekOfYear, for: today)!.start
 
-        // Determine which weeks to fill (current week + next week)
+        // Target weeks: current week + next week (including source week to clean duplicates)
         let targetWeekStarts = [
             currentWeekStart,
             calendar.date(byAdding: .weekOfYear, value: 1, to: currentWeekStart)!
@@ -180,22 +180,19 @@ final class ClassService {
         var createdCount = 0
 
         for targetStart in targetWeekStarts {
-            // Skip if target week is the same as source week
-            if calendar.isDate(targetStart, equalTo: sourceWeekStart, toGranularity: .weekOfYear) {
-                continue
-            }
-
-            // Clear unbooked classes in target week to remove duplicates
+            // Clear all unbooked classes in this week first
             let targetEnd = calendar.date(byAdding: .day, value: 7, to: targetStart)!
             let deleted = try await clearUnbookedClasses(from: targetStart, to: targetEnd)
             if deleted > 0 {
-                print("📅 Cleared \(deleted) unbooked classes from target week")
+                print("📅 Cleared \(deleted) unbooked classes from week starting \(targetStart)")
             }
 
+            // Calculate day offset from source week to target week
             let dayOffset = calendar.dateComponents([.day], from: sourceWeekStart, to: targetStart).day!
             let batch = db.batch()
+            var batchCount = 0
 
-            for source in sourceClasses {
+            for source in template {
                 let newDateTime = calendar.date(byAdding: .day, value: dayOffset, to: source.dateTime)!
 
                 // Skip classes in the past
@@ -215,11 +212,12 @@ final class ClassService {
 
                 let ref = db.collection(collectionName).document()
                 try batch.setData(from: newClass, forDocument: ref)
-                createdCount += 1
+                batchCount += 1
             }
 
-            if createdCount > 0 {
+            if batchCount > 0 {
                 try await batch.commit()
+                createdCount += batchCount
             }
         }
 
