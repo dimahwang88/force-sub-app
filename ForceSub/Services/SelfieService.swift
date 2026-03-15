@@ -28,7 +28,7 @@ final class SelfieService {
     /// Uploads a selfie image to Firebase Storage and saves the download URL
     /// to the user's Firestore document for later face recognition retrieval.
     ///
-    /// Images are stored at `selfies/{userId}.jpg` — one selfie per user,
+    /// Images are stored at `selfies/{userId}` — one selfie per user,
     /// overwritten on re-upload to keep storage lean.
     func uploadSelfie(image: UIImage, userId: String) async throws -> String {
         // Verify Storage bucket is configured
@@ -42,7 +42,7 @@ final class SelfieService {
             throw SelfieError.compressionFailed
         }
 
-        let storageRef = storage.reference().child("selfies/\(userId).jpg")
+        let storageRef = storage.reference().child("selfies/\(userId)")
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
 
@@ -81,7 +81,7 @@ final class SelfieService {
     /// Deletes the user's selfie from Firebase Storage and removes the URL
     /// from their Firestore document.
     func deleteSelfie(userId: String) async throws {
-        let storageRef = storage.reference().child("selfies/\(userId).jpg")
+        let storageRef = storage.reference().child("selfies/\(userId)")
 
         do {
             try await storageRef.delete()

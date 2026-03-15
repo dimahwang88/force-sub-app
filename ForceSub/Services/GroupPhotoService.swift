@@ -23,13 +23,13 @@ final class GroupPhotoService {
 
     /// Uploads a group photo to Firebase Storage and saves the download URL
     /// to the class's Firestore document.
-    /// Images are stored at `classPhotos/{classId}.jpg`.
+    /// Images are stored at `classPhotos/{classId}`.
     func uploadGroupPhoto(image: UIImage, classId: String) async throws -> String {
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             throw GroupPhotoError.compressionFailed
         }
 
-        let storageRef = storage.reference().child("classPhotos/\(classId).jpg")
+        let storageRef = storage.reference().child("classPhotos/\(classId)")
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
 
@@ -56,7 +56,7 @@ final class GroupPhotoService {
     /// Deletes the group photo from Firebase Storage and removes the URL
     /// from the class's Firestore document.
     func deleteGroupPhoto(classId: String) async throws {
-        let storageRef = storage.reference().child("classPhotos/\(classId).jpg")
+        let storageRef = storage.reference().child("classPhotos/\(classId)")
 
         do {
             try await storageRef.delete()
