@@ -11,11 +11,27 @@ final class ClassService {
             return []
         }
 
+        print("📅 Fetching classes for \(startOfDay) to \(endOfDay)")
+
         let snapshot = try await db.collection(collectionName)
             .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: startOfDay))
             .whereField("dateTime", isLessThan: Timestamp(date: endOfDay))
             .order(by: "dateTime")
             .getDocuments()
+
+        print("📅 Found \(snapshot.documents.count) documents")
+
+        // If no docs for today, check what dates exist at all
+        if snapshot.documents.isEmpty {
+            let allSnapshot = try await db.collection(collectionName)
+                .order(by: "dateTime", descending: true)
+                .limit(to: 3)
+                .getDocuments()
+            for doc in allSnapshot.documents {
+                let data = doc.data()
+                print("📅 Existing class '\(data["name"] ?? "?")' dateTime: \(data["dateTime"] ?? "nil")")
+            }
+        }
 
         return snapshot.documents.compactMap { doc in
             do {
