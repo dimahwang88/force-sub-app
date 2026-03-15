@@ -17,9 +17,22 @@
 		BAEDE6AD2F40D4110011DCA7 /* ForceSub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ForceSub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BA0000012F40D4120011DCA7 /* Exceptions for "ForceSub" folder in "ForceSub" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = BAEDE6AC2F40D4110011DCA7 /* ForceSub */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		BAEDE6AF2F40D4110011DCA7 /* ForceSub */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BA0000012F40D4120011DCA7 /* Exceptions for "ForceSub" folder in "ForceSub" target */,
+			);
 			path = ForceSub;
 			sourceTree = "<group>";
 		};
