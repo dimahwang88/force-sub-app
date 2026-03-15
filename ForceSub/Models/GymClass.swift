@@ -46,7 +46,7 @@ struct GymClass: Codable, Identifiable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
 
-        _id = try container.decodeIfPresent(DocumentID<String>.self, forKey: .id) ?? DocumentID()
+        _id = try container.decodeIfPresent(DocumentID<String>.self, forKey: .id) ?? DocumentID(wrappedValue: nil)
         name = try container.decode(String.self, forKey: .name)
         instructor = try container.decode(String.self, forKey: .instructor)
         dateTime = try container.decode(Date.self, forKey: .dateTime)
