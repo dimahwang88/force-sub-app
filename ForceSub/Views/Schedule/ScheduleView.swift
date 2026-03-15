@@ -5,6 +5,7 @@ struct ScheduleView: View {
     @State private var viewModel = ScheduleViewModel()
     @State private var selectedDate = Calendar.current.startOfDay(for: Date())
     @State private var showAddClass = false
+    @State private var showExtendConfirm = false
 
     private var isAdmin: Bool {
         authViewModel.currentUser?.admin ?? false
@@ -19,6 +20,14 @@ struct ScheduleView: View {
         .navigationTitle("Schedule")
         .toolbar {
             if isAdmin {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showExtendConfirm = true
+                    } label: {
+                        Label("Extend", systemImage: "arrow.forward.to.line")
+                    }
+                    .disabled(viewModel.isExtending)
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showAddClass = true
@@ -27,6 +36,25 @@ struct ScheduleView: View {
                     }
                 }
             }
+        }
+        .alert("Extend Schedule", isPresented: $showExtendConfirm) {
+            Button("Extend") {
+                Task {
+                    await viewModel.extendSchedule()
+                    await viewModel.loadClasses(for: selectedDate)
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Copy the most recent week of classes to this week and next week?")
+        }
+        .alert("Schedule Extended", isPresented: .init(
+            get: { viewModel.extendResult != nil },
+            set: { if !$0 { viewModel.extendResult = nil } }
+        )) {
+            Button("OK") { viewModel.extendResult = nil }
+        } message: {
+            Text(viewModel.extendResult ?? "")
         }
         .sheet(isPresented: $showAddClass) {
             NavigationStack {
