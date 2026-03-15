@@ -7,6 +7,7 @@ final class ScheduleViewModel {
     var weekDays: [Date] = []
     var isLoading = false
     var errorMessage: String?
+    var needsExtend = false
     var isExtending = false
     var extendResult: String?
 
@@ -19,8 +20,13 @@ final class ScheduleViewModel {
     func loadClasses(for date: Date) async {
         isLoading = true
         errorMessage = nil
+        needsExtend = false
         do {
             classesForSelectedDay = try await classService.fetchClasses(for: date)
+        } catch let error as ScheduleError {
+            needsExtend = true
+            errorMessage = error.localizedDescription
+            classesForSelectedDay = []
         } catch {
             errorMessage = error.localizedDescription
             classesForSelectedDay = []

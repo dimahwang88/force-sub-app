@@ -99,6 +99,29 @@ struct ScheduleView: View {
         Group {
             if viewModel.isLoading {
                 LoadingView(message: "Loading classes...")
+            } else if viewModel.needsExtend {
+                ContentUnavailableView {
+                    Label("Schedule Needs Updating", systemImage: "calendar.badge.clock")
+                } description: {
+                    Text(viewModel.errorMessage ?? "The schedule has expired.")
+                } actions: {
+                    if isAdmin {
+                        Button {
+                            Task {
+                                await viewModel.extendSchedule()
+                                await viewModel.loadClasses(for: selectedDate)
+                            }
+                        } label: {
+                            Text("Extend Schedule")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(viewModel.isExtending)
+                    } else {
+                        Text("Ask an admin to extend the schedule.")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             } else if let error = viewModel.errorMessage {
                 ContentUnavailableView(
                     "Something went wrong",

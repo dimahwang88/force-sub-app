@@ -1,6 +1,17 @@
 import Foundation
 import FirebaseFirestore
 
+enum ScheduleError: LocalizedError {
+    case scheduleExpired(lastClassDate: Date)
+
+    var errorDescription: String? {
+        switch self {
+        case .scheduleExpired(let date):
+            return "Schedule ended on \(date.formattedShort). Tap Extend to generate new classes."
+        }
+    }
+}
+
 final class ClassService {
     private let db = Firestore.firestore()
     private let collectionName = "classes"
@@ -21,15 +32,19 @@ final class ClassService {
 
         print("📅 Found \(snapshot.documents.count) documents")
 
-        // If no docs for today, check what dates exist at all
+        // If no docs for this day, check what dates exist at all
         if snapshot.documents.isEmpty {
             let allSnapshot = try await db.collection(collectionName)
                 .order(by: "dateTime", descending: true)
-                .limit(to: 3)
+                .limit(to: 1)
                 .getDocuments()
-            for doc in allSnapshot.documents {
-                let data = doc.data()
-                print("📅 Existing class '\(data["name"] ?? "?")' dateTime: \(data["dateTime"] ?? "nil")")
+            if let mostRecentData = allSnapshot.documents.first?.data(),
+               let mostRecentTimestamp = mostRecentData["dateTime"] as? Timestamp {
+                let mostRecentDate = mostRecentTimestamp.dateValue()
+                print("📅 Most recent class: \(mostRecentDate)")
+                if mostRecentDate < startOfDay {
+                    throw ScheduleError.scheduleExpired(lastClassDate: mostRecentDate)
+                }
             }
         }
 
