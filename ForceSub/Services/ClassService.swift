@@ -73,15 +73,7 @@ final class ClassService {
             )
         }
 
-        // Deduplicate by name + time (handles duplicate docs in Firestore)
-        var seenKeys = Set<String>()
-        let unique = decoded.filter { cls in
-            let comps = Calendar.current.dateComponents([.hour, .minute], from: cls.dateTime)
-            let key = "\(cls.name)|\(comps.hour!)|\(comps.minute!)"
-            return seenKeys.insert(key).inserted
-        }
-
-        return unique
+        return decoded
     }
 
     func fetchClass(id: String) async throws -> GymClass? {

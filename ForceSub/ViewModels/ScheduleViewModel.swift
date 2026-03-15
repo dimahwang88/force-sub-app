@@ -22,7 +22,17 @@ final class ScheduleViewModel {
         errorMessage = nil
         needsExtend = false
         do {
-            classesForSelectedDay = try await classService.fetchClasses(for: date)
+            let fetched = try await classService.fetchClasses(for: date)
+
+            // Deduplicate: keep only one class per name + time slot
+            var seen = Set<String>()
+            let unique = fetched.filter { cls in
+                let comps = Calendar.current.dateComponents([.hour, .minute], from: cls.dateTime)
+                let key = "\(cls.name)|\(comps.hour!)|\(comps.minute!)"
+                return seen.insert(key).inserted
+            }
+
+            classesForSelectedDay = unique
         } catch let error as ScheduleError {
             needsExtend = true
             errorMessage = error.localizedDescription
