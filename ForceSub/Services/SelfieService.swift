@@ -37,7 +37,7 @@ final class SelfieService {
         metadata.contentType = "image/jpeg"
 
         // Upload the image data
-        _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
+        _ = try await storageRef.putData(imageData, metadata: metadata)
 
         // Get the download URL
         let downloadURL = try await storageRef.downloadURL()

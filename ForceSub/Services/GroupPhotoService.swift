@@ -33,7 +33,7 @@ final class GroupPhotoService {
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
 
-        _ = try await storageRef.putDataAsync(imageData, metadata: metadata)
+        _ = try await storageRef.putData(imageData, metadata: metadata)
 
         let downloadURL = try await storageRef.downloadURL()
         let urlString = downloadURL.absoluteString
