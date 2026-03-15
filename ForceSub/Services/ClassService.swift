@@ -73,7 +73,15 @@ final class ClassService {
             )
         }
 
-        return decoded
+        // Deduplicate by name + time (handles duplicate docs in Firestore)
+        var seenKeys = Set<String>()
+        let unique = decoded.filter { cls in
+            let comps = Calendar.current.dateComponents([.hour, .minute], from: cls.dateTime)
+            let key = "\(cls.name)|\(comps.hour!)|\(comps.minute!)"
+            return seenKeys.insert(key).inserted
+        }
+
+        return unique
     }
 
     func fetchClass(id: String) async throws -> GymClass? {
@@ -99,20 +107,20 @@ final class ClassService {
         try await db.collection(collectionName).document(id).delete()
     }
 
-    /// Fetches the most recent week that has classes and rebuilds the schedule
-    /// for the current and next week. Deletes all future unbooked classes first
-    /// to ensure a clean slate (no duplicates). Returns the number of classes created.
+    /// Extends the schedule by filling in missing classes for the next 14 days
+    /// based on the weekly template derived from existing classes.
+    /// Only creates classes that don't already exist (no duplicates).
+    /// Returns the number of new classes created.
     func extendSchedule() async throws -> Int {
         let calendar = Calendar.current
         let now = Date()
+        let todayStart = calendar.startOfDay(for: now)
 
-        // Step 1: Fetch ALL classes to build a weekly template
+        // Step 1: Fetch existing classes to build a weekly template
         let allSnapshot = try await db.collection(collectionName)
             .order(by: "dateTime", descending: true)
             .limit(to: 100)
             .getDocuments()
-
-        print("📅 extendSchedule: fetched \(allSnapshot.documents.count) total classes")
 
         let allClasses = allSnapshot.documents.compactMap { doc in
             try? doc.data(as: GymClass.self)
@@ -120,7 +128,7 @@ final class ClassService {
 
         if allClasses.isEmpty { return 0 }
 
-        // Build a template: unique classes by name + weekday + hour + minute
+        // Build template: unique classes by name + weekday + hour + minute
         var seen = Set<String>()
         var template: [(name: String, instructor: String, weekday: Int, hour: Int, minute: Int,
                          durationMinutes: Int, level: ClassLevel, description: String,
@@ -142,49 +150,44 @@ final class ClassService {
 
         print("📅 Template has \(template.count) unique class slots")
 
-        // Step 2: Delete ALL future unbooked classes
-        let futureSnapshot = try await db.collection(collectionName)
-            .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: now))
-            .getDocuments()
-
-        print("📅 Found \(futureSnapshot.documents.count) future documents to check")
-
-        var deletedCount = 0
-        let toDelete = futureSnapshot.documents.filter { doc in
-            let data = doc.data()
-            // Keep classes that have bookings
-            if let booked = data["bookedCount"] as? NSNumber, booked.intValue > 0 {
-                return false
-            }
-            return true
-        }
-
-        for chunk in stride(from: 0, to: toDelete.count, by: 500) {
-            let batch = db.batch()
-            let end = min(chunk + 500, toDelete.count)
-            for i in chunk..<end {
-                batch.deleteDocument(toDelete[i].reference)
-            }
-            try await batch.commit()
-            deletedCount += (end - chunk)
-        }
-
-        print("📅 Deleted \(deletedCount) future unbooked classes")
-
-        // Step 3: Generate fresh classes for current week + next week
-        let todayStart = calendar.startOfDay(for: now)
+        // Step 2: For each of the next 14 days, check what already exists
+        // and only create missing classes
         var createdCount = 0
 
-        // Generate for the next 14 days
         for dayOffset in 0..<14 {
             guard let targetDay = calendar.date(byAdding: .day, value: dayOffset, to: todayStart) else { continue }
             let targetWeekday = calendar.component(.weekday, from: targetDay)
 
+            // Get slots for this weekday
+            let daySlots = template.filter { $0.weekday == targetWeekday }
+            if daySlots.isEmpty { continue }
+
+            // Fetch existing classes for this day
+            let dayStart = calendar.startOfDay(for: targetDay)
+            guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else { continue }
+
+            let existingSnapshot = try await db.collection(collectionName)
+                .whereField("dateTime", isGreaterThanOrEqualTo: Timestamp(date: dayStart))
+                .whereField("dateTime", isLessThan: Timestamp(date: dayEnd))
+                .getDocuments()
+
+            // Build set of existing class keys (name + hour + minute)
+            let existingKeys = Set(existingSnapshot.documents.compactMap { doc -> String? in
+                let data = doc.data()
+                guard let name = data["name"] as? String,
+                      let ts = data["dateTime"] as? Timestamp else { return nil }
+                let comps = calendar.dateComponents([.hour, .minute], from: ts.dateValue())
+                return "\(name)|\(comps.hour!)|\(comps.minute!)"
+            })
+
             let batch = db.batch()
             var batchCount = 0
 
-            for slot in template {
-                guard slot.weekday == targetWeekday else { continue }
+            for slot in daySlots {
+                let slotKey = "\(slot.name)|\(slot.hour)|\(slot.minute)"
+
+                // Skip if this class already exists for this day
+                if existingKeys.contains(slotKey) { continue }
 
                 var comps = calendar.dateComponents([.year, .month, .day], from: targetDay)
                 comps.hour = slot.hour
@@ -218,7 +221,7 @@ final class ClassService {
             }
         }
 
-        print("📅 Created \(createdCount) new classes")
+        print("📅 Created \(createdCount) new classes (skipped existing)")
         return createdCount
     }
 }
