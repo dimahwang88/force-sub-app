@@ -9,6 +9,7 @@ extension Color {
         case "beginner", "all levels": return .green
         case "intermediate": return .orange
         case "advanced", "coloured belts": return .red
+        case "4-8 yrs old", "9-15 yrs old": return .purple
         default: return .blue
         }
     }
