@@ -267,23 +267,29 @@ struct CameraView: View {
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
-        context.coordinator.previewLayer = previewLayer
+    func makeUIView(context: Context) -> PreviewUIView {
+        let view = PreviewUIView()
+        view.previewLayer.session = session
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        context.coordinator.previewLayer?.frame = uiView.bounds
-    }
+    func updateUIView(_ uiView: PreviewUIView, context: Context) {}
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    final class PreviewUIView: UIView {
+        let previewLayer = AVCaptureVideoPreviewLayer()
 
-    final class Coordinator {
-        var previewLayer: AVCaptureVideoPreviewLayer?
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            previewLayer.videoGravity = .resizeAspectFill
+            layer.addSublayer(previewLayer)
+        }
+
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            previewLayer.frame = bounds
+        }
     }
 }
 
