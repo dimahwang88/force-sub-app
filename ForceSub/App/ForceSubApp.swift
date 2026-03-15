@@ -18,6 +18,19 @@ struct ForceSubApp: App {
     init() {
         FirebaseApp.configure()
         _authViewModel = State(initialValue: AuthViewModel())
+
+        // Debug: verify Info.plist privacy keys are present in the bundle
+        let bundle = Bundle.main
+        if let cameraDesc = bundle.object(forInfoDictionaryKey: "NSCameraUsageDescription") as? String {
+            print("✅ NSCameraUsageDescription: \(cameraDesc)")
+        } else {
+            print("❌ NSCameraUsageDescription is MISSING from Info.plist!")
+        }
+        if let micDesc = bundle.object(forInfoDictionaryKey: "NSMicrophoneUsageDescription") as? String {
+            print("✅ NSMicrophoneUsageDescription: \(micDesc)")
+        } else {
+            print("❌ NSMicrophoneUsageDescription is MISSING from Info.plist!")
+        }
     }
 
     var body: some Scene {

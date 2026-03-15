@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import AVFoundation
 
 struct GroupPhotoCaptureView: View {
     let classId: String
@@ -7,6 +8,7 @@ struct GroupPhotoCaptureView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = GroupPhotoViewModel()
     @State private var photosPickerItem: PhotosPickerItem?
+    @State private var showCameraPermissionAlert = false
 
     var body: some View {
         NavigationStack {
@@ -37,9 +39,19 @@ struct GroupPhotoCaptureView: View {
             .task {
                 viewModel.groupPhotoURL = groupPhotoURL
             }
-            .sheet(isPresented: $viewModel.showCamera) {
+            .fullScreenCover(isPresented: $viewModel.showCamera) {
                 GroupCameraView(image: $viewModel.selectedImage)
                     .ignoresSafeArea()
+            }
+            .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please enable camera access in Settings to take a group photo.")
             }
             .onChange(of: photosPickerItem) { _, newItem in
                 guard let newItem else { return }
@@ -126,7 +138,7 @@ struct GroupPhotoCaptureView: View {
         VStack(spacing: 12) {
             HStack(spacing: 12) {
                 Button {
-                    viewModel.showCamera = true
+                    requestCameraAccess()
                 } label: {
                     Label("Camera", systemImage: "camera.fill")
                         .frame(maxWidth: .infinity)
@@ -191,47 +203,71 @@ struct GroupPhotoCaptureView: View {
             }
         }
     }
+
+    private func requestCameraAccess() {
+        guard AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) != nil else {
+            viewModel.errorMessage = "Camera is not available on this device."
+            return
+        }
+
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            viewModel.showCamera = true
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        viewModel.showCamera = true
+                    } else {
+                        showCameraPermissionAlert = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showCameraPermissionAlert = true
+        @unknown default:
+            showCameraPermissionAlert = true
+        }
+    }
 }
 
-// MARK: - Camera (rear-facing for group photos)
+// MARK: - Group Camera (rear-facing)
 
-struct GroupCameraView: UIViewControllerRepresentable {
+struct GroupCameraView: View {
     @Binding var image: UIImage?
     @Environment(\.dismiss) private var dismiss
+    @State private var cameraManager = CameraManager(position: .back)
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.cameraDevice = .rear
-        picker.delegate = context.coordinator
-        return picker
-    }
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+            CameraPreviewView(session: cameraManager.session)
+                .ignoresSafeArea()
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: GroupCameraView
-
-        init(_ parent: GroupCameraView) {
-            self.parent = parent
-        }
-
-        func imagePickerController(
-            _ picker: UIImagePickerController,
-            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-        ) {
-            if let uiImage = info[.originalImage] as? UIImage {
-                parent.image = uiImage
+            VStack {
+                HStack {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding()
+                    Spacer()
+                }
+                Spacer()
+                Button {
+                    cameraManager.capturePhoto { capturedImage in
+                        image = capturedImage
+                        dismiss()
+                    }
+                } label: {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 72, height: 72)
+                        .overlay(Circle().stroke(Color.gray, lineWidth: 3).frame(width: 62, height: 62))
+                }
+                .padding(.bottom, 30)
             }
-            parent.dismiss()
         }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
-        }
+        .task { await cameraManager.start() }
+        .onDisappear { cameraManager.stop() }
     }
 }

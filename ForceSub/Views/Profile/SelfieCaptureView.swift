@@ -1,11 +1,13 @@
 import SwiftUI
 import PhotosUI
+import AVFoundation
 
 struct SelfieCaptureView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = SelfieViewModel()
     @State private var photosPickerItem: PhotosPickerItem?
+    @State private var showCameraPermissionAlert = false
 
     var body: some View {
         NavigationStack {
@@ -40,9 +42,19 @@ struct SelfieCaptureView: View {
                     await viewModel.loadSelfieURL(userId: userId)
                 }
             }
-            .sheet(isPresented: $viewModel.showCamera) {
+            .fullScreenCover(isPresented: $viewModel.showCamera) {
                 CameraView(image: $viewModel.selectedImage)
                     .ignoresSafeArea()
+            }
+            .alert("Camera Access Required", isPresented: $showCameraPermissionAlert) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Please enable camera access in Settings to take a selfie.")
             }
             .onChange(of: photosPickerItem) { _, newItem in
                 guard let newItem else { return }
@@ -109,7 +121,7 @@ struct SelfieCaptureView: View {
             // Source selection row
             HStack(spacing: 12) {
                 Button {
-                    viewModel.showCamera = true
+                    requestCameraAccess()
                 } label: {
                     Label("Camera", systemImage: "camera.fill")
                         .frame(maxWidth: .infinity)
@@ -176,47 +188,217 @@ struct SelfieCaptureView: View {
             }
         }
     }
+
+    private func requestCameraAccess() {
+        print("📷 requestCameraAccess called")
+        print("📷 Bundle camera key: \(Bundle.main.object(forInfoDictionaryKey: "NSCameraUsageDescription") ?? "nil")")
+
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        print("📷 Authorization status: \(status.rawValue) (0=notDetermined, 1=restricted, 2=denied, 3=authorized)")
+
+        switch status {
+        case .authorized:
+            print("📷 Already authorized, showing camera")
+            viewModel.showCamera = true
+        case .notDetermined:
+            print("📷 Not determined, requesting access...")
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                print("📷 Access request result: \(granted)")
+                DispatchQueue.main.async {
+                    if granted {
+                        viewModel.showCamera = true
+                    } else {
+                        showCameraPermissionAlert = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            print("📷 Access denied/restricted")
+            showCameraPermissionAlert = true
+        @unknown default:
+            showCameraPermissionAlert = true
+        }
+    }
 }
 
-// MARK: - Camera UIViewControllerRepresentable
+// MARK: - AVCaptureSession Camera View
 
-struct CameraView: UIViewControllerRepresentable {
+struct CameraView: View {
     @Binding var image: UIImage?
     @Environment(\.dismiss) private var dismiss
+    @State private var cameraManager = CameraManager(position: .front)
 
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.cameraDevice = .front
-        picker.delegate = context.coordinator
-        return picker
-    }
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+            CameraPreviewView(session: cameraManager.session)
+                .ignoresSafeArea()
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-        let parent: CameraView
-
-        init(_ parent: CameraView) {
-            self.parent = parent
-        }
-
-        func imagePickerController(
-            _ picker: UIImagePickerController,
-            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
-        ) {
-            if let uiImage = info[.originalImage] as? UIImage {
-                parent.image = uiImage
+            VStack {
+                HStack {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.white)
+                        .padding()
+                    Spacer()
+                }
+                Spacer()
+                Button {
+                    cameraManager.capturePhoto { capturedImage in
+                        image = capturedImage
+                        dismiss()
+                    }
+                } label: {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 72, height: 72)
+                        .overlay(Circle().stroke(Color.gray, lineWidth: 3).frame(width: 62, height: 62))
+                }
+                .padding(.bottom, 30)
             }
-            parent.dismiss()
+        }
+        .task { await cameraManager.start() }
+        .onDisappear { cameraManager.stop() }
+    }
+}
+
+// MARK: - Camera Preview (UIViewRepresentable)
+
+struct CameraPreviewView: UIViewRepresentable {
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> PreviewUIView {
+        let view = PreviewUIView()
+        view.previewLayer.session = session
+        return view
+    }
+
+    func updateUIView(_ uiView: PreviewUIView, context: Context) {}
+
+    final class PreviewUIView: UIView {
+        let previewLayer = AVCaptureVideoPreviewLayer()
+
+        override init(frame: CGRect) {
+            super.init(frame: frame)
+            previewLayer.videoGravity = .resizeAspectFill
+            layer.addSublayer(previewLayer)
         }
 
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
+        required init?(coder: NSCoder) { fatalError() }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            previewLayer.frame = bounds
         }
+    }
+}
+
+// MARK: - Camera Manager (AVCaptureSession)
+
+@MainActor @Observable
+final class CameraManager: NSObject {
+    let session = AVCaptureSession()
+    private let photoOutput = AVCapturePhotoOutput()
+    private let position: AVCaptureDevice.Position
+    private let delegate: PhotoCaptureDelegate
+
+    init(position: AVCaptureDevice.Position) {
+        self.position = position
+        self.delegate = PhotoCaptureDelegate(position: position)
+        super.init()
+    }
+
+    func start() async {
+        guard session.inputs.isEmpty else { return }
+        print("📷 CameraManager.start() - position: \(position == .front ? "front" : "back")")
+
+        session.beginConfiguration()
+        session.sessionPreset = .photo
+
+        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: position) else {
+            print("📷 ❌ No camera device found for position")
+            session.commitConfiguration()
+            return
+        }
+        print("📷 Found device: \(device.localizedName)")
+
+        let input: AVCaptureDeviceInput
+        do {
+            input = try AVCaptureDeviceInput(device: device)
+        } catch {
+            print("📷 ❌ AVCaptureDeviceInput error: \(error)")
+            session.commitConfiguration()
+            return
+        }
+
+        guard session.canAddInput(input) else {
+            print("📷 ❌ Cannot add input to session")
+            session.commitConfiguration()
+            return
+        }
+        session.addInput(input)
+        print("📷 Added video input")
+
+        if session.canAddOutput(photoOutput) {
+            session.addOutput(photoOutput)
+            print("📷 Added photo output")
+        }
+        session.commitConfiguration()
+        print("📷 Session configured, starting...")
+
+        let session = self.session
+        await Task.detached {
+            print("📷 Starting session on background thread")
+            session.startRunning()
+            print("📷 Session running: \(session.isRunning)")
+        }.value
+    }
+
+    func stop() {
+        let session = self.session
+        Task.detached {
+            session.stopRunning()
+        }
+    }
+
+    func capturePhoto(completion: @escaping @MainActor (UIImage?) -> Void) {
+        delegate.completion = completion
+        let settings = AVCapturePhotoSettings()
+        photoOutput.capturePhoto(with: settings, delegate: delegate)
+    }
+}
+
+// Separate nonisolated delegate to avoid MainActor issues with AVCapturePhotoCaptureDelegate callbacks
+nonisolated final class PhotoCaptureDelegate: NSObject, AVCapturePhotoCaptureDelegate {
+    let position: AVCaptureDevice.Position
+    var completion: (@MainActor (UIImage?) -> Void)?
+
+    init(position: AVCaptureDevice.Position) {
+        self.position = position
+        super.init()
+    }
+
+    func photoOutput(
+        _ output: AVCapturePhotoOutput,
+        didFinishProcessingPhoto photo: AVCapturePhoto,
+        error: Error?
+    ) {
+        let completion = self.completion
+        self.completion = nil
+
+        guard let data = photo.fileDataRepresentation(),
+              let image = UIImage(data: data) else {
+            DispatchQueue.main.async { completion?(nil) }
+            return
+        }
+
+        let result: UIImage
+        if position == .front, let cgImage = image.cgImage {
+            result = UIImage(cgImage: cgImage, scale: image.scale, orientation: .leftMirrored)
+        } else {
+            result = image
+        }
+
+        DispatchQueue.main.async { completion?(result) }
     }
 }
