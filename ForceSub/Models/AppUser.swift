@@ -13,7 +13,10 @@ enum AccountType: String, Codable, CaseIterable {
     }
 }
 
-struct AppUser: Codable, Identifiable {
+struct AppUser: Codable, Identifiable, Hashable {
+    static func == (lhs: AppUser, rhs: AppUser) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
     @DocumentID var id: String?
     let email: String
     var displayName: String
