@@ -16,16 +16,15 @@ struct CustomerListView: View {
 
     var body: some View {
         List(filteredCustomers) { customer in
-            NavigationLink(value: customer) {
+            NavigationLink {
+                CustomerDetailView(customer: customer, bookings: bookings(for: customer))
+            } label: {
                 CustomerRowView(customer: customer, bookings: bookings(for: customer))
             }
         }
         .listStyle(.insetGrouped)
         .searchable(text: $searchText, prompt: "Search customers")
         .navigationTitle("Customers")
-        .navigationDestination(for: AppUser.self) { customer in
-            CustomerDetailView(customer: customer, bookings: bookings(for: customer))
-        }
         .overlay {
             if filteredCustomers.isEmpty {
                 ContentUnavailableView.search(text: searchText)
