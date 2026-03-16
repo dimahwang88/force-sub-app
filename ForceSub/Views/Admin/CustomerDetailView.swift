@@ -61,11 +61,14 @@ struct CustomerDetailView: View {
                     LabeledContent("Phone", value: phone)
                 }
                 LabeledContent("Joined", value: customer.createdAt.formattedShort)
-                if let belt = customer.beltRank, !belt.isEmpty {
-                    LabeledContent("Belt Rank") {
+                LabeledContent("Belt Rank") {
+                    if let belt = customer.beltRank, !belt.isEmpty {
                         Text(belt.capitalized)
                             .bold()
                             .foregroundStyle(Color.beltColor(for: belt))
+                    } else {
+                        Text("Not set")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
