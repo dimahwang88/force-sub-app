@@ -77,7 +77,7 @@ struct SignUpView: View {
                                         .font(.subheadline.bold())
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 8)
-                                        .background(beltRank == belt ? Color.beltColor(for: belt).opacity(0.25) : .quaternary)
+                                        .background(beltRank == belt ? Color.beltColor(for: belt).opacity(0.25) : Color(.quaternarySystemFill))
                                         .foregroundStyle(beltRank == belt ? Color.beltColor(for: belt) : .secondary)
                                         .clipShape(Capsule())
                                         .overlay(
