@@ -7,15 +7,18 @@ struct SignUpView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var beltRank = ""
     @State private var adminCode = ""
     @State private var showAdminCode = false
+
+    private static let beltRanks = ["white", "blue", "purple", "brown", "black", "yellow", "orange", "green", "red"]
 
     private var passwordsMatch: Bool {
         !password.isEmpty && password == confirmPassword
     }
 
     private var formValid: Bool {
-        !displayName.isEmpty && !email.isEmpty && passwordsMatch
+        !displayName.isEmpty && !email.isEmpty && !beltRank.isEmpty && passwordsMatch
     }
 
     var body: some View {
@@ -59,6 +62,35 @@ struct SignUpView: View {
                         .foregroundStyle(.red)
                 }
 
+                // Belt rank picker
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Belt Rank")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Self.beltRanks, id: \.self) { belt in
+                                Button {
+                                    beltRank = belt
+                                } label: {
+                                    Text(belt.capitalized)
+                                        .font(.subheadline.bold())
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(beltRank == belt ? Color.beltColor(for: belt).opacity(0.25) : .quaternary)
+                                        .foregroundStyle(beltRank == belt ? Color.beltColor(for: belt) : .secondary)
+                                        .clipShape(Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(beltRank == belt ? Color.beltColor(for: belt) : .clear, lineWidth: 2)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
                 // Admin invite code (hidden by default)
                 if showAdminCode {
                     TextField("Admin Invite Code", text: $adminCode)
@@ -95,6 +127,7 @@ struct SignUpView: View {
                         email: email,
                         password: password,
                         displayName: displayName,
+                        beltRank: beltRank,
                         adminCode: adminCode.isEmpty ? nil : adminCode.trimmingCharacters(in: .whitespaces)
                     )
                     if authViewModel.errorMessage == nil {
