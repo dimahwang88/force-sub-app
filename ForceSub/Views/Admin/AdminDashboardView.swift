@@ -28,7 +28,11 @@ struct AdminDashboardView: View {
         List {
             // Summary stats
             Section("Overview") {
-                StatRow(icon: "person.2.fill", label: "Total Customers", value: "\(viewModel.totalCustomers)", color: .blue)
+                NavigationLink {
+                    CustomerListView(customers: viewModel.customers, allBookings: viewModel.allBookings)
+                } label: {
+                    StatRow(icon: "person.2.fill", label: "Total Customers", value: "\(viewModel.totalCustomers)", color: .blue)
+                }
                 StatRow(icon: "checkmark.circle.fill", label: "Classes Attended", value: "\(viewModel.totalClassesAttended)", color: .green)
                 StatRow(icon: "calendar.badge.clock", label: "Upcoming Bookings", value: "\(viewModel.upcomingBookingsCount)", color: .orange)
             }

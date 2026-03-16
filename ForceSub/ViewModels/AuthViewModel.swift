@@ -36,7 +36,7 @@ final class AuthViewModel {
         isLoading = false
     }
 
-    func signUp(email: String, password: String, displayName: String, adminCode: String? = nil) async {
+    func signUp(email: String, password: String, displayName: String, beltRank: String, adminCode: String? = nil) async {
         isLoading = true
         errorMessage = nil
         do {
@@ -44,6 +44,7 @@ final class AuthViewModel {
                 email: email,
                 password: password,
                 displayName: displayName,
+                beltRank: beltRank,
                 adminCode: adminCode
             )
         } catch {

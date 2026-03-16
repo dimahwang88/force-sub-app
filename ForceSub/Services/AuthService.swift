@@ -29,7 +29,7 @@ final class AuthService {
         return result.user.uid
     }
 
-    func signUp(email: String, password: String, displayName: String, adminCode: String? = nil) async throws -> String {
+    func signUp(email: String, password: String, displayName: String, beltRank: String, adminCode: String? = nil) async throws -> String {
         var accountType: AccountType = .customer
 
         // Validate admin invite code before creating the account
@@ -46,6 +46,7 @@ final class AuthService {
             email: email,
             displayName: displayName,
             createdAt: Date(),
+            beltRank: beltRank,
             isAdmin: accountType == .admin,
             accountType: accountType.rawValue
         )
