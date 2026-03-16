@@ -3,6 +3,9 @@ import SwiftUI
 struct AdminDashboardView: View {
     @Environment(AuthViewModel.self) private var authViewModel
     @State private var viewModel = AdminDashboardViewModel()
+    @State private var selectedBeltTab = "All"
+
+    private static let beltTabs = ["All", "White", "Blue", "Purple", "Brown"]
 
     var body: some View {
         Group {
@@ -89,12 +92,40 @@ struct AdminDashboardView: View {
                 Text("Share an invite code with someone to let them sign up as an admin.")
             }
 
-            // Daily attendance chart (last 30 days)
+            // Daily attendance chart (last 30 days) with belt rank tabs
             if !viewModel.dailyAttendance.isEmpty {
                 Section("Attendance — Last 30 Days") {
-                    DailyAttendanceChartView(data: viewModel.dailyAttendance)
-                        .frame(height: 160)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Self.beltTabs, id: \.self) { tab in
+                                Button {
+                                    withAnimation { selectedBeltTab = tab }
+                                } label: {
+                                    Text(tab == "All" ? "All" : "\(tab) Belt")
+                                        .font(.caption.bold())
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            selectedBeltTab == tab
+                                                ? beltTabColor(for: tab)
+                                                : Color(uiColor: .systemGray5)
+                                        )
+                                        .foregroundStyle(selectedBeltTab == tab ? .white : .primary)
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                         .padding(.vertical, 4)
+                    }
+
+                    DailyAttendanceChartView(
+                        data: selectedBeltTab == "All"
+                            ? viewModel.dailyAttendance
+                            : viewModel.dailyAttendance(forBelt: selectedBeltTab)
+                    )
+                    .frame(height: 160)
+                    .padding(.vertical, 4)
                 }
             }
 
@@ -146,6 +177,13 @@ struct AdminDashboardView: View {
             }
         }
         .listStyle(.insetGrouped)
+    }
+
+    private func beltTabColor(for tab: String) -> Color {
+        switch tab {
+        case "All": return .blue
+        default: return Color.beltColor(for: tab)
+        }
     }
 }
 

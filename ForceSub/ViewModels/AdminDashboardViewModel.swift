@@ -65,8 +65,27 @@ final class AdminDashboardViewModel {
 
     /// Attendance per day for the last 30 days (for the chart).
     var dailyAttendance: [DailyAttendance] {
+        dailyAttendance(forBelt: nil)
+    }
+
+    /// Attendance per day filtered by belt rank. Pass `nil` for all belts.
+    func dailyAttendance(forBelt belt: String?) -> [DailyAttendance] {
         let now = Date()
         let startDate = calendar.date(byAdding: .day, value: -29, to: calendar.startOfDay(for: now))!
+
+        // Build set of user IDs matching the belt filter
+        let filteredUserIds: Set<String>?
+        if let belt {
+            filteredUserIds = Set(
+                customers.compactMap { customer in
+                    guard let id = customer.id,
+                          customer.beltRank?.lowercased() == belt.lowercased() else { return nil }
+                    return id
+                }
+            )
+        } else {
+            filteredUserIds = nil
+        }
 
         var dayMap: [Date: Int] = [:]
         for i in 0..<30 {
@@ -75,6 +94,9 @@ final class AdminDashboardViewModel {
         }
 
         for booking in allBookings where booking.classDateTime < now {
+            if let filteredUserIds, !filteredUserIds.contains(booking.userId) {
+                continue
+            }
             let day = calendar.startOfDay(for: booking.classDateTime)
             if day >= startDate {
                 dayMap[day, default: 0] += 1
